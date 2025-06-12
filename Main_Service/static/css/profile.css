@@ -1,0 +1,232 @@
+.profile_file_input {
+    display: none;
+}
+
+.profile_img_label {
+    /* display: inline-block; */
+    height: 30px;
+    width: 30px;
+    border-radius: 100%;
+    background-color: #2B3674;
+    cursor: pointer;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+
+}
+
+.profile_img_label img {
+    height: 16px;
+    width: 16px;
+}
+
+.profile_my_profile_title {
+    font-weight: 700;
+    color: #7E7575;
+}
+
+.profile_profile_img_info_main_div {
+    color: #2B3674;
+    display: flex;
+    flex-direction: row;
+    gap: 50px;
+    flex-wrap: wrap;
+    justify-content: center;
+}
+
+.profile_profile_img_div {
+    max-height: 200px;
+    width: 200px;
+    border-radius: 100%;
+    background-color: #D9D9D9;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.profile_profile_main_img {
+    max-height: 200px;
+    width: 200px;
+}
+
+.profile_smal_camera_icon_update_img {
+    border-radius: 100%;
+    height: 30px;
+    width: 30px;
+    position: relative;
+    bottom: 40px;
+    left: 147px;
+}
+
+.profile_name_title {
+    text-transform: uppercase;
+    font-weight: 700;
+    font-size: 20px;
+}
+
+
+
+/* ********************************* */
+
+.dashboard_dropdown_main_div {
+    position: relative;
+    display: inline-block;
+}
+
+.dashboard_btn {
+    cursor: pointer;
+}
+
+.dashboard_content_dropdown {
+    display: none;
+    position: absolute;
+    top: -100%;
+    right: -100%;
+    background-color: #f9f9f9;
+    min-width: 170px;
+    box-shadow: 0px 8px 16px rgba(0, 0, 0, 0.2);
+    z-index: 1;
+    border-radius: 5px;
+}
+
+.dashboard_content_dropdown a {
+    color: black;
+    padding: 10px 10px;
+    text-decoration: none;
+    display: block;
+}
+
+.dashboard_content_dropdown div:hover {
+    background-color: #f1f1f1;
+}
+
+.dropdown_show {
+    display: block;
+}
+
+.dashboard_div {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+}
+
+.dashboard_div img {
+    height: 30px;
+    padding-left: 10px
+}
+
+/* **************** */
+
+.lux_graph_level_go_back_button {
+    background-color: #0084FF;
+    color: #ffffff;
+    border: none;
+    border-radius: 5px;
+    width: 110px;
+    height: 35px;
+    font-size: small;
+
+}
+
+/* ***************************************  */
+/* Admin link styling */
+.admin-link {
+    text-align: center;
+    margin-top: 30px;
+}
+
+.admin-link-btn {
+    color: #007bff;
+    font-weight: 600;
+    text-decoration: none;
+}
+
+.admin-link-btn:hover {
+    text-decoration: underline;
+}
+
+/* Table styling */
+.device_table_container {
+    margin: 0 10%;
+    margin-top: 40px;
+    overflow-x: auto;
+    border: 1px solid #E0E0E0;
+}
+
+.device_table {
+    width: 100%;
+    border-collapse: collapse;
+    font-family: Arial, sans-serif;
+}
+
+.device_table th,
+.device_table td {
+    padding: 12px 18px;
+    /* text-align: left; */
+    text-align: center;
+    border: 1px solid #E0E0E0;
+}
+
+.device_table th {
+    background-color: rgb(236, 236, 236);
+    color: #555;
+    font-weight: 600;
+}
+
+.device_table tr:nth-child(even) {
+    background-color: #f9f9f9;
+}
+
+.delete-action {
+    text-align: center;
+}
+
+.delete_img {
+    width: 18px;
+    height: 18px;
+    cursor: pointer;
+    transition: transform 0.2s ease;
+}
+
+.delete_img:hover {
+    transform: scale(1.2);
+}
+
+/* ############ */
+
+/* Admin link container */
+.admin-link-container {
+    text-align: center;
+    margin-top: 40px;
+}
+
+/* Add Devices button styling */
+.btn-add-device {
+    background-color: #1f93ff; /* Green for 'Add' action */
+    color: #fff;
+    padding: 14px;
+    font-size: 14px;
+    border-radius: 8px;
+    text-decoration: none;
+    display: inline-block;
+    text-align: center;
+    transition: background-color 0.3s ease, transform 0.3s ease;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+/* Button text styling */
+.btn-text {
+    font-family: 'Arial', sans-serif;
+    text-transform: uppercase;
+}
+
+/* Hover effect */
+.btn-add-device:hover {
+    background-color: #0084ff; /* Darker green on hover */
+    transform: translateY(-3px); /* Slight lift effect */
+}
+
+.btn-add-device:active {
+    transform: translateY(1px); /* Pressed effect */
+}
+

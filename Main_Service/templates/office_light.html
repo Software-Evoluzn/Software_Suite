@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Office Light</title>
+  <link rel="stylesheet" href="../static/css/style.css" />
+  <link rel="stylesheet" href="../static/fontawesome-free-5.15.4-web/fontawesome-free-5.15.4-web/css/all.min.css" />
+
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css"
+    integrity="sha512-SnH5WK+bZxgPHs44uWIX+LLJAJ9/2PkPKZ5QiAj6Ta86w+fsb2TkcmfRyVX3pBnMFcV7oQPJkl9QevSCWr3W6A=="
+    crossorigin="anonymous" referrerpolicy="no-referrer" />
+
+  <link rel="stylesheet" href="../static/css/navbar_sidebar.css" />
+  <script src="../static/js/jquery.js"></script>
+  <script src="../static/js/socket.io.js"></script>
+  <link rel="stylesheet" href="../static/css/font.css" />
+  <link rel="stylesheet" href="../static/css/dark_mode.css" />
+
+</head>
+
+<body>
+
+
+
+  {% include 'navbar_backup.html' %}
+  <!-- Main Content Area -->
+  <main class="main-content">
+    <!-- Main content goes here -->
+    <div class="dashboard_graph">
+      <div class="dashboard_power_consum_title_dropdown_div">
+        <div class="dashboard_power_consumption_title">
+          <img src="../static/img/power_consumption.png" />
+          <div id="office_Chart_Title1" class="dashboard_poer_consumption_title">
+            Power Consumption
+          </div>
+        </div>
+        <div>
+          <select id="officeTimeframe1" class="dashboard_power_dropdown">
+            <option value="daily">Today</option>
+            <option value="weekly">Weekly</option>
+            <option value="monthly">Monthly</option>
+          </select>
+
+           
+      <!--       
+            <select id="download" class="dashboard_power_dropdown" onchange="handleDownloadChange()">
+              <option value="download">Download</option>
+              <option value="pdf" data-url="#">PDF</option>
+              <option value="csv" data-url="#">Excel</option>
+            </select> -->
+         
+          <script>
+         function handleDownloadChange() {
+              var selectElement = document.getElementById('download');
+              var selectedOption = selectElement.options[selectElement.selectedIndex];
+              var url = selectedOption.getAttribute('data-url');
+
+              if (selectedOption.value === "csv") {
+                // Make an AJAX request to generate the CSV
+                fetch(url, { method: 'POST' })
+                  .then(response => response.text())
+                  .then(data => {
+                    if (data === "No data to generate CSV.") {
+                      alert(data);
+                    } else {
+                      window.location.href = '/csv_office';
+                    }
+                  })
+                  .catch(error => console.error('Error generating CSV:', error));
+              } else if (selectedOption.value === "pdf") {
+                // Redirect to the PDF generation URL
+                window.location.href = url;
+              }
+            }
+
+          </script>
+
+        </div>
+      </div>
+      <div class="dashboard_power_consumption_graph_div">
+        <canvas id="officelight_power1" class="main_power_consumption_graph_main_div"></canvas>
+      </div>
+    </div>
+    <div class="dashboard_schedule_savings">
+      <div class="dashboard_schedule" id="dashboard_go_to_schedule">
+        <div class="dashboard_schedule_title_img">
+          <img class="dashboard_schedule_img" src="../static/img/Group 38.png" />
+          <div class="dashboard_schedule_title">Schedule</div>
+        </div>
+
+
+        <div class="dashboard_add_schedule_btn_div">
+          <button class="dashboard_add_schedule_btn" style="display:none;">Add Schedule</button>
+        </div>
+        <!-- *******schedule start********** -->
+        <div id="scheduleForm" class="dashboard_select_dev_schedule_set"></div>
+        <div class="dashboard_select_device_schedule_time">
+
+          <div>
+            <select class="dashboard_days dashboard_daily_weekly_monthly_schedule" name="cars"
+              id="dashboard_daily_weekly_monthly_schedule">
+              <option value="daily">Daily</option>
+              <option value="weekly">Weekly</option>
+              <option value="monthly">Monthly</option>
+            </select>
+          </div>
+        </div>
+
+        <form action="/store_schedule" id="scheduleForms" method="post" onsubmit="return validateFormDaily()">
+          <section class="daily_schedule">
+            <div class="daily_schedule_input_div">
+              <input type="time" class="daily_schedule_input1" id="fromTime" name="fromTime" />
+
+              <input type="time" class="daily_schedule_input2" id="toTime" name="toTime" />
+
+              <input type="hidden" id="everyday" name="day" value="0123456">
+              <input type="hidden" id="officeGlobal" name="aquarelleGlobal" value="officeGlobal">
+              <input type="hidden" id="scheduling" name="scheduling" value="1">
+            </div>
+            <div class="daily_error daily_schedule_error_div"></div>
+            <div class="daily_schedule_set_daily_div">
+              <button type="submit" id="set-daily" class="daily_schedule_set_daily_button">
+                Set Daily
+              </button>
+            </div>
+          </section>
+        </form>
+
+
+        <form action="/store_schedule" id="scheduleFormsWeekly" method="post" onsubmit="return validateFormWeekly()">
+          <section class="weekly_daily_schedule dashboard_hidden_schedule">
+            <div class="dashboard_weekly_weekdays">
+              <div class="dashboard_weekdays_div">
+                <input type="checkbox" value="0" name="day" id="monday" class="weekday" />
+                <label>Monday</label>
+              </div>
+              <div class="dashboard_weekdays_div">
+                <input type="checkbox" value="1" name="day" id="tuesday" class="weekday" />
+                <label>Tuesday</label>
+              </div>
+              <div class="dashboard_weekdays_div">
+                <input type="checkbox" value="2" name="day" id="wednesday" class="weekday" />
+                <label>Wednesday</label>
+              </div>
+              <div class="dashboard_weekdays_div">
+                <input type="checkbox" value="3" name="day" id="thursday" class="weekday" />
+                <label>Thursday</label>
+              </div>
+              <div class="dashboard_weekdays_div">
+                <input type="checkbox" value="4" name="day" id="friday" class="weekday" />
+                <label>Friday</label>
+              </div>
+              <div class="dashboard_weekdays_div">
+                <input type="checkbox" value="5" name="day" id="saturday" class="weekday" />
+                <label>Saturday</label>
+              </div>
+              <div class="dashboard_weekdays_div">
+                <input type="checkbox" value="6" name="day" id="sunday" class="weekday" />
+                <label>Sunday</label>
+              </div>
+
+              <div class="dashboard_weekdays_div">
+                <input type="checkbox" class="everyday_weekly" id="everyday" name="day" value="0123456">
+                <label for="everyday">Everyday</label>
+              </div>
+
+              <input type="hidden" id="officeGlobal" name="aquarelleGlobal" value="officeGlobal">
+              <input type="hidden" id="scheduling" name="scheduling" value="1">
+
+            </div>
+            <div class="dashboard_weekdays_input_div">
+              <input type="time" class="weekly_schedule_input1" id="fromTime" name="fromTime" />
+              <input type="time" class="weekly_schedule_input2" id="toTime" name="toTime" />
+            </div>
+            <div class="weekly_error1"></div>
+            <div class="weekly_error2"></div>
+
+            <div class="weekly_schedule_set_daily_div">
+              <button type="submit" id="set-weekly" class="weekly_schedule_set_daily_button">
+                Set Weekly
+              </button>
+            </div>
+          </section>
+        </form>
+
+        <form action="/store_schedule_monthly" id="scheduleFormsMonthly" method="post"
+          onsubmit="return validateFormMonthly()">
+          <section class="monthly_schedule dashboard_hidden_schedule">
+            <div class="monthly_calender_input_div">
+              <input type="date" class="monthly_schedule_date_input1" id="ScheduleStartDate" name="ScheduleStartDate" />
+              <input type="date" class="monthly_schedule_date_input2" id="ScheduleEndDate" name="ScheduleEndDate" />
+              <input type="hidden" id="everyday" name="day" value="0123456" />
+              <input type="hidden" id="officeGlobal" name="aquarelleGlobal" value="officeGlobal">
+              <input type="hidden" id="scheduling" name="scheduling" value="1">
+            </div>
+            <div class="monthly_time_input_div">
+              <input class="monthly_schedule_input1" type="time" id="fromTime" name="fromTime" />
+              <input class="monthly_schedule_input2" type="time" id="toTime" name="toTime" />
+            </div>
+            <div class="monthly_error_div">
+              <div class="monthly_error1"></div>
+              <div class="monthly_error2"></div>
+            </div>
+            <div class="monthly_schedule_set_daily_div">
+              <button type="submit" id="set-monthly" class="monthly_schedule_set_daily_button">
+                Set Monthly
+              </button>
+            </div>
+          </section>
+        </form>
+        <!-- <section>
+              <div class="schedule_list" id="todoList">
+              
+              </div>
+            </section> -->
+
+      </div>
+      <div class="dashboard_savings_div">
+        <div class="dashboard_savings_1">
+          <img class="dashboard_save_money" src="../static/img/Group 39.png" />
+          <div class="dashboard_savings__title">Savings</div>
+        </div>
+
+        <!-- ********** -->
+        <div class="dashboard_you_saved">
+          <div>
+            <div class="dashboard_you_saved_title">You Saved</div>
+            <div class="dashboard_saves_money"><span class="ml-1 mt-2 main_total_saving_text" id="result6"></span> Rs</div>
+          </div>
+          <!-- <div class="dashboard_currency">
+            <select class="dashboard_days">
+              <option value="daily">INR</option>
+              <option value="weekly">USD</option>
+            </select>
+          </div> -->
+        </div>
+        <!-- *********** -->
+      </div>
+    </div>
+
+  </main>
+
+  <footer class="footer1">
+    <footer class="footer2">
+      Powered by <span class="footerevoluzn">Evoluzn</span>
+    </footer>
+  </footer>
+
+
+  <script src="../static/js/jquery.js"></script>
+  <script src="../static/js/bootstrap.min.js"></script>
+  <script src="../static/js/chart.js"></script>
+  <script src="../static/js/socket_office.js"></script>
+
+</body>
+
+</html>

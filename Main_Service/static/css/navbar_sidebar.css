@@ -1,0 +1,148 @@
+
+.sidebar {
+    height: 100vh;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 120px;
+    background-color: #ffffff;
+    box-shadow: 6px 6px 16.9px rgba(140, 140, 140, 0.25);
+    padding-top: 20px;
+    transition: all 0.3s;
+    z-index: 1;
+  }
+  
+  .sidebar_close_btn {
+    color: #2B3674;
+    font-size: 20px;
+  }
+  
+  .sidebar a {
+    padding: 15px;
+    text-align: center;
+    display: block;
+    color: #4e4e4e;
+    text-decoration: none;
+    transition: color 0.3s;
+  }
+  
+  .sidebar_dashboard_anch {
+    margin-top: 30px;
+  }
+  
+  .sidebar a.active {
+    color: #007bff;
+  }
+  
+  .main_content {
+    margin-left: 120px;
+    padding: 20px;
+  }
+  
+  .sidebar-icon {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+  
+  .sidebar-icon i {
+    font-size: 24px;
+    margin-bottom: 5px;
+  }
+  
+  .sidebar_logout {
+    position: absolute;
+    bottom: 20px;
+    width: 100%;
+  }
+  
+  .navbar_menu_btn {
+    border: none;
+    background-color: #f9f9f9;
+  }
+  
+  .navbar_menu_icon {
+    color: #2B3674;
+  
+  }
+  
+  .navbar_darkmode_btn {
+    border: none;
+    background-color: #f9f9f9;
+  }
+  
+  .navbar_darkmode_btn:hover {
+    border: none;
+    background-color: #f9f9f9;
+  }
+  
+  .navbar_darkmode_icon {
+    color: #2B3674;
+    font-size: 20px;
+  
+  }
+  
+  .navbar_darkmode_icon:hover {
+    color: #2B3674;
+  
+  }
+  
+  .navbar_bell_btn {
+    border: none;
+    background-color: #f9f9f9;
+  }
+  
+  .navbar_bell_btn:hover {
+    border: none;
+    background-color: #f9f9f9;
+  }
+  
+  .navbar_bell_icon {
+    color: #2B3674;
+    font-size: 20px;
+  
+  }
+  
+  .close-btn {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    display: none;
+  }
+  
+  @media (max-width: 768px) {
+    .sidebar {
+      left: -150px;
+    }
+  
+    .sidebar.active {
+      left: 0;
+    }
+  
+    .content {
+      margin-left: 0;
+    }
+  
+    .close-btn {
+      display: block;
+      font-size: 30px;
+      font-weight: 600;
+      color: #2B3674;
+    }
+  
+    .main_content {
+      margin-left: 0;
+    }
+  }
+  
+  /* *********************************************************************sidebar and navbar end******************************************************************** */
+  /* *********************************************************************footer start******************************************************************************* */
+  
+  .footer {
+    display: flex;
+    justify-content: center;
+    color: #2B3674;
+  }
+  
+  /* *********************************************************************footer end******************************************************************************* */
+  

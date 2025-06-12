@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+    <link href="../static/css/bootstrap.css" rel="stylesheet" />
+    <link href="../static/css/profile.css" rel="stylesheet" />
+    <script src="../static/js/profile.js"></script>
+</head>
+
+
+<body>
+    <div class="p-3">
+        <div class="d-flex justify-content-between align-items-center">
+            <div>
+                <a href="{{ url_for('home') }}"><button class="lux_graph_level_go_back_button">
+                        <img src="../static/img/left_arrow.svg"> Go Back</button></a>
+            </div>
+            <div>
+            </div>
+        </div>
+
+    </div>
+
+    <div class="d-flex justify-content-center">
+        <div>
+            <h3 class="text-center p-3 profile_my_profile_title">MY PROFILE</h3>
+            <div class="mt-5 px-2 profile_profile_img_info_main_div">
+                <div>
+                    <div class="profile_profile_img_div">
+                        <!-- <img class="profile_profile_main_img" src="../static/img/sensor.png"> -->
+                        <img class="profile_profile_main_img" src="{{ url_for('static', filename=profile_img) if profile_img else url_for('static', filename='img/sensor.png') }}">
+                    </div>
+                    <form id="uploadForm" action="/upload_profile_img" method="POST" enctype="multipart/form-data">
+                        <div class="profile_smal_camera_icon_update_img">
+                            <label for="fileUpload" class="profile_img_label">
+                                <img src="../static/img/logout.svg" alt="Upload">
+                            </label>
+                            <input type="file" id="fileUpload" name="profile_image" class="profile_file_input" />
+                        </div>
+                    </form>
+                    
+                </div>
+
+                <div class="d-flex align-items-center">
+                    <div>
+                        <div class="profile_name_title">
+                            {{ company_name }}
+                        </div>
+                        <div class="mt-4 d-flex flex-row gap-2">
+                            <img src="../static/img/mail.svg">
+                            <div>{{ email }}</div>
+                        </div>
+                        {% if is_admin %}
+                        <div class="admin-link-container">
+                            <a href="{{ url_for('admin_page') }}" class="btn-add-device">
+                                <span class="btn-text">Add Devices</span>
+                            </a>
+                        </div>
+                        {% endif %}
+
+
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+
+
+    <div class="device_table_container">
+        <table class="device_table">
+            <thead>
+                <tr>
+                    {% if is_admin %}
+                    <th>Company Name</th>
+                    {% endif %}
+                    <th>Device Type</th>
+                    <th>Device Name</th>
+                    <th>Timestamp</th>
+                    {% if is_admin %}
+                    <th>Action</th>
+                    {% endif %}
+                </tr>
+            </thead>
+            <tbody>
+                {% for device in devices %}
+                <tr>
+                    {% if is_admin %}
+                    {% if device.show_company %}
+                    <td rowspan="{{ device.rowspan }}">{{ device.company_name }}</td>
+                    {% endif %}
+                    {% endif %}
+                    <td>{{ device.device_type }}</td>
+                    <td>{{ device.device_name }}</td>
+                    <td>{{ device.timestamp }}</td>
+
+                    {% if is_admin %}
+                    <td class="delete-action">
+                        <img src="../static/img/bin.png" alt="Delete" class="delete_img"
+                            data-name="{{ device.device_name }}">
+                    </td>
+                    {% endif %}
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+
+
+    <!-- <footer></footer> -->
+</body>
+
+</html>

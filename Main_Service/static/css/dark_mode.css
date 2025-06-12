@@ -1,0 +1,113 @@
+/* dark mode css */
+
+.dark-mode,
+.dark-mode .dashboard_navbar,
+.dark-mode .dashboard_main_dashboard_titile,
+.dark-mode .dashboard_dashboard_titile,
+.dark-mode .dashboard_master_switch_div,
+.dark-mode .dashboard_auto_brightness_div,
+.dark-mode .dashboard_intensity_percent,
+.dark-mode .dashboard_intensity_control_text {
+  background-color: #0b1437;
+  /* Dark mode background color */
+  color: white;
+}
+
+/* .dark-mode .navbar_input {
+  background-color: #111c44;
+}
+
+.dark-mode .input1,
+.dark-mode .input1::placeholder {
+  background-color: #0b1437;
+  color: white;
+} */
+
+.dark-mode .dashboard_all_main_div1 {
+  background-color: #111c44;
+}
+
+.dark-mode .dashboard_led1 {
+  border: 2px solid #b0bbd5;
+}
+
+.dark-mode .dashboard_smartLED_title,
+.dark-mode .dashboard_light_intensity_title,
+.dark-mode .dashboard_luminous_title,
+.dark-mode .dashboard_lux_value,
+.dark-mode .dashboard_power_title,
+.dark-mode .dashboard_consumption_value,
+.dark-mode .dashboard_power_value,
+.dark-mode .dashboard_off_on_title,
+.dark-mode .dashboard_percent,
+.dark-mode .dashboard_poer_consumption_title,
+.dark-mode .dashboard_schedule_title,
+.dark-mode .dashboard_savings__title,
+.dark-mode .dashboard_you_saved_title,
+.dark-mode .dashboard_saves_money,
+.dark-mode .footer2,
+.dark-mode .sidebar_dashboard_title,
+.dark-mode .dashboard_profile_icon,
+.dark-mode .sidebar_logout_text,
+.dark-mode .dashboard_weekdays_div,
+.dark-mode .menu-icon,
+.dark-mode .welcome_back,
+.dark-mode .registration_title,
+.dark-mode .pls_log_in,
+.dark-mode .aboutus_para,
+.dark-mode .aboutus_heading,
+.dark-mode .resetyourpassword_title,
+.dark-mode .resetyourpassword_email_title,
+.dark-mode .feedback_title,
+.dark-mode .feedback_email_title,
+.dark-mode .privicy_policy_heading,
+.dark-mode .privicy_policy_para,
+.dark-mode .profile_main_account_sett, 
+.dark-mode .profile_main_legal_and_about,
+.dark-mode .password_title,
+.dark-mode .email_address_title,
+.dark-mode .remember_me,
+.dark-mode .Forgot_password
+{
+  color: #fff;
+}
+
+.dark-mode .dashboard_graph,
+.dark-mode .dashboard_schedule,
+.dark-mode .dashboard_savings_div,
+.dark-mode .sidebar,
+.dark-mode .navbar_input,
+.dark-mode .dashboard_add_device_button1,
+.dark-mode .dashboard_dashboard1 {
+  background-color: #111c44;
+  color: white;
+}
+
+.dark-mode .input1,
+.dark-mode .input1::placeholder,
+.dark-mode .dashboard_selectdevice,
+.dark-mode .dashboard_days,
+.dark-mode .dashboard_power_dropdown,
+.dark-mode .login_container, 
+.dark-mode .registration_container, 
+.dark-mode .resetyourpassword_container,
+.dark-mode .feedback_container {
+  background-color: #0b1437;
+  color: white;
+}
+
+.dark-mode .dashboard_statement_alert {
+  color: #ff7373;
+        .dark-mode .pls_log_in{
+            color: #d3d3d3e0;
+        }
+}
+.dark-mode .resetyourpassword_passwordreset,
+.dark-mode .profile_main_contact_support, 
+.dark-mode .profile_main_feedback, 
+.dark-mode .profile_main_aboutus, 
+.dark-mode .profile_main_privacy_policy,
+.dark-mode .profile_main_change_password, 
+.dark-mode .profile_main_profile_info{
+    color: #bfccec;
+}

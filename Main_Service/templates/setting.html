@@ -1,0 +1,131 @@
+<!-- <!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+    <link href="../static/css/bootstrap.css" rel="stylesheet" />
+    <link href="../static/css/dashboard.css" rel="stylesheet" />
+
+    <style>
+        /* ********************************* */
+        @import url('../font/dm_sans_font.css');
+
+        .dashboard_dropdown_main_div {
+            position: relative;
+            display: inline-block;
+        }
+
+        .sidebar_dashboard_title {
+            font-weight: 700;
+            color: #2b3674;
+            margin-bottom: 20px;
+            padding: 5px;
+        }
+
+        .dashboard_btn {
+            cursor: pointer;
+        }
+
+        img.dashboard_btn {
+            width: 24px;
+            height: 24px;
+        }
+
+        .dashboard_content_dropdown {
+            display: none;
+            position: absolute;
+            top: -100%;
+            right: 0;
+            background-color: #f9f9f9;
+            min-width: 170px;
+            box-shadow: 0px 8px 16px rgba(0, 0, 0, 0.2);
+            z-index: 1;
+            border-radius: 5px;
+        }
+
+        .dashboard_content_dropdown a {
+            color: black;
+            padding: 10px 10px;
+            text-decoration: none;
+            display: block;
+        }
+
+        .dashboard_content_dropdown div:hover {
+            background-color: #f1f1f1;
+        }
+
+        .dropdown_show {
+            display: block;
+        }
+
+        .dashboard_div {
+            display: flex;
+            flex-direction: row;
+            align-items: center;
+        }
+
+        .dashboard_div img {
+            height: 30px;
+            padding-left: 10px
+        }
+
+        .dashboard_div:hover {
+            cursor: pointer;
+        }
+
+        .setting_bar_icon {
+            cursor: pointer;
+        }
+
+        /* **************** */
+    </style>
+</head>
+
+<body>
+    <div>
+        <div class="dashboard_dropdown_main_div">
+            <div onclick="toggledashboard()" class="setting_bar_icon">
+                <div class="d-flex flex-column gap-2 align-items-center">    
+                    <img class="dashboard_btn" src="../static/img/settings.svg">
+                    <div class="dashboard_btn sidebar_dashboard_title">Settings</div>
+                </div>
+            </div>
+            <div id="dashboard-menu" class="dashboard_content_dropdown ">
+                <div class="dashboard_div ">
+                    <img src="../static/img/profile.svg">
+                    <a href="{{ url_for('profile') }}">Profile</a>
+                </div>
+                <div>
+                    <hr>
+                </div>
+                <div class="dashboard_div">
+                    <img class="pl-2" src="../static/img/logout.svg">
+                    <a href="{{ url_for('logout') }}">logout</a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+
+        // *******************************
+        function toggledashboard() {
+            document.getElementById("dashboard-menu").classList.toggle("dropdown_show");
+        }
+
+        // Close dashboard if clicked outside
+        window.onclick = function (event) {
+            if (!event.target.matches('.dashboard_btn')) {
+                var dashboards = document.getElementsByClassName("dashboard_content_dropdown");
+                for (let i = 0; i < dashboards.length; i++) {
+                    dashboards[i].classList.remove("dropdown_show");
+                }
+            }
+        }
+        // *************************************
+    </script>
+</body>
+
+</html> -->
