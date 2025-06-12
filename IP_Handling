@@ -1,0 +1,8 @@
+Give All IP Addresses of Microservices in Main_Service app.py
+
+WTS_URL = 'http://192.168.0.223:5002'           Port 5002     line No.:- 22
+RUNNING_URL = 'http://192.168.0.223:5003'       Port 5003     line No.:- 23
+
+Give IP Address of Main_Service app.py
+
+"ip": "http://192.168.0.223:5000"               Port 5000     line No.:- 2 
