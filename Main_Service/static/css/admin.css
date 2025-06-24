@@ -10,7 +10,7 @@
     font-family: "DM Sans", sans-serif;
 }
 
-body {
+body {   
     margin: 0;
     padding: 0;
     display: flex;
@@ -21,6 +21,7 @@ body {
     font-family: "DM Sans", sans-serif;
     flex-direction: column;
     min-height: 100vh;
+    overflow-x: hidden;
 }
 
 .admin_container {
@@ -99,7 +100,13 @@ body {
     width: 100%;
     display: flex;
     justify-content: center;
-    align-items: center;
+    align-items: start;
+    max-height: 95vh;
+    overflow-y: auto;
+}
+
+.del_btn{
+    padding: 0 !important;
 }
 
 /* Hide the password reveal icon in Edge */
@@ -112,13 +119,15 @@ input::-ms-clear {
 .admin_form_container {
     text-align: left;
     width: 50%;
+    display: flex;
+    flex-direction: column;
 }
 
 .admin_form_container p {
     color: #DE8C73;
 }
 
-.admin_form_container h2 {
+.admin_form_container h2, .admin_form_container h4 {
     color: #2B3674;
     font-weight: bold;
     text-align: center;
@@ -150,7 +159,7 @@ input::-ms-clear {
 }
 
 
-.admin_form_container button {
+.admin_form_container .submit_btn button {
     /* background: #3742fa; */
     padding: 10px 30px;
     border: none;
@@ -208,6 +217,15 @@ footer span {
     height: 20px;
 }
 
+/* =================================== */
+
+/* .login_form_container{
+    margin-top: 20%;
+} */
+
+/* =================================== */
+
+
 /* @media (max-width: 1500px) {
     .select_container select{
         width: 30%;
@@ -249,16 +267,36 @@ footer span {
         flex-direction: column;
     }
 
+    .admin_form_box {
+        max-height: 88vh
+    }
+
     .admin_left_panel {
         height: 25%;
     }
 
-    .admin_left_panel img {
-        width: 100px;
+    .admin_right_panel {
+        height: 75%;
     }
 
     .admin_toggle_buttons {
-        display: none;
+        position: absolute;
+        flex-direction: row;
+        padding: 2px;
+        align-items: flex-end;
+        bottom: -12px;
+        right: auto;
+        transform: translateY(0%);
+    }
+
+    .admin_toggle_buttons button {
+        border-radius: 20px 20px 0 0;
+        font-size: small;
+    }
+
+
+    .admin_left_panel img {
+        width: 100px;
     }
 
     .admin_input_div {
@@ -313,7 +351,7 @@ footer span {
         font-size: medium;
     }
 
-    .admin_form_container button {
+    .admin_form_container .submit_btn button {
         padding: 5px 30px;
     }
 
@@ -356,6 +394,44 @@ footer span {
     }
 }
 
+/* @media (max-width: 768px) {
+    .admin_right_panel {
+        width: 60%;
+        padding: 10px;
+    }
+
+    .admin_form_container,
+    .login_form_container {
+        width: 100%;
+        padding: 10px;
+        margin-top: 20px;
+    }
+
+    .device_container {
+        flex-direction: column;
+    }
+
+    .device_container .select_container,
+    .device_name_container {
+        width: 100% !important;
+    }
+
+    .device_container button {
+        margin-left: 0;
+        margin-top: 10px;
+    }
+
+    .admin_toggle_buttons {
+        right: 0;
+    }
+
+    .admin_toggle_buttons button {
+        font-size: 14px;
+        padding: 6px 12px;
+    }
+} */
+
+
 @media (max-width: 400px) {
     .admin_form_container select {
         padding: 7px;
@@ -365,3 +441,30 @@ footer span {
         background-size: 0.7rem;
     }
 }
+
+
+/* ============================== Product Registration  */
+
+.form-box {
+            border: 1px solid #ccc;
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 20px;
+        }
+
+
+ .serial-row {
+            position: relative;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            padding: 10px;
+            margin-bottom: 10px;
+        }
+
+        .remove-serial {
+            position: absolute;
+            top: 5px;
+            right: 5px;
+            cursor: pointer;
+        }
+
