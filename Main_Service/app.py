@@ -6,21 +6,24 @@ import datetime
 import os
 from werkzeug.utils import secure_filename
 import requests
-from flask_socketio import SocketIO, emit
+from flask_socketio import SocketIO, emit, join_room
 import socketio as socketio_client
 from socketio.exceptions import ConnectionError
 import paho.mqtt.client as mqtt
 import random
-from datetime import datetime
+from flask_cors import CORS
+# from flask_socketio import join_room
 
 app = Flask(__name__)
+CORS(app)
 socketio = SocketIO(app, cors_allowed_origins="*")
 
 # === SOCKET.IO CLIENT TO MICRO SERVICE ===
 micro_client = socketio_client.Client()
 
-WTS_URL = 'http://192.168.0.223:5002'
-RUNNING_URL = 'http://192.168.0.223:5003'
+WTS_URL = 'http://192.168.0.224:5002'
+RUNNING_URL = 'http://192.168.0.224:5003'
+OFFICE_URL = 'http://192.168.0.224:5004'
 
 SECRET_KEY = 'evoluzn@123'
 
@@ -42,16 +45,42 @@ def create_tables():
     cursor = conn.cursor()
 
     # SQL queries to create tables if they don't exist
+    # create_user_table_query = """
+    #     CREATE TABLE IF NOT EXISTS user_table (
+    #         id INT AUTO_INCREMENT PRIMARY KEY,
+    #         company_name VARCHAR(255),
+    #         email VARCHAR(100) UNIQUE,
+    #         password VARCHAR(255),
+    #         is_active BOOLEAN DEFAULT TRUE,
+    #         is_admin BOOLEAN DEFAULT FALSE,
+    #         inserttimestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
+    #         profile_img varchar(255) DEFAULT NULL
+    #     );
+    # """
     create_user_table_query = """
         CREATE TABLE IF NOT EXISTS user_table (
             id INT AUTO_INCREMENT PRIMARY KEY,
-            company_name VARCHAR(255),
+            name VARCHAR(255) DEFAULT NULL,
             email VARCHAR(100) UNIQUE,
             password VARCHAR(255),
             is_active BOOLEAN DEFAULT TRUE,
             is_admin BOOLEAN DEFAULT FALSE,
             inserttimestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
-            profile_img varchar(255) DEFAULT NULL
+            profile_img VARCHAR(255) DEFAULT NULL,
+            contact_no VARCHAR(20) DEFAULT NULL,
+            unit_name VARCHAR(255) DEFAULT NULL,
+            contact_number VARCHAR(20) DEFAULT NULL
+        );
+    """
+    create_company_details_query = """
+        CREATE TABLE IF NOT EXISTS company_details (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            company_name VARCHAR(255) NOT NULL,
+            company_address TEXT NOT NULL,
+            gst_no VARCHAR(50) UNIQUE NOT NULL,
+            unit_name VARCHAR(255),
+            unit_address TEXT,
+            inserttimestamp DATETIME DEFAULT CURRENT_TIMESTAMP
         );
     """
 
@@ -108,12 +137,16 @@ def create_tables():
         );
     """)
 
+
+
+
     # ALTER TABLE alert_temp ADD UNIQUE unique_index (device_name, timestamp)
     conn.commit()
 
     try:
         # Execute the queries
         cursor.execute(create_user_table_query)
+        cursor.execute(create_company_details_query) 
         cursor.execute(create_admin_table_query)
         cursor.execute(temp_data_query)
         cursor.execute(pannel_table_query)
@@ -126,7 +159,7 @@ def create_tables():
         cursor.close()
         conn.close()
 
-
+# to create panels for devices that are not yet in the panel table
 def create_panels_for_devices(cursor):
     # Get devices from temp_data that are not yet in panel table
     cursor.execute("""
@@ -179,6 +212,7 @@ def create_panels_for_devices(cursor):
 
 def get_user_name_from_token():
     token = request.cookies.get('token')
+
     if not token:
         return redirect('/')
 
@@ -222,6 +256,7 @@ def on_disconnect(client, userdata, rc):
     if rc != 0:
         print("Disconnected from MQTT broker. Trying to reconnect...")
         mqttc.reconnect()
+
 
 
 def on_message(client, userdata, message):
@@ -443,7 +478,90 @@ def login():
 
 @app.route('/admin', methods=['GET', 'POST'])
 def admin_page():
-    return render_template('admin.html')
+    
+    return render_template('company_registration.html')
+
+# --- Updated Flask Route ---
+@app.route('/company-details', methods=['GET', 'POST'])
+def insert_company_details():
+    print('inside function')
+    data = request.get_json()
+    company_name = data.get('company_name')
+    company_address = data.get('company_address')
+    gst_no = data.get('gst_no')
+    units = data.get('units', [])
+    users = data.get('users', [])
+
+    if not all([company_name, company_address, gst_no]):
+        return jsonify({'status': 'error', 'message': 'Company name, address, and GST No are required.'}), 400
+
+    try:
+        conn = connect_db()
+        cursor = conn.cursor()
+
+        # Insert into company_details (1 entry per unit)
+        for unit in units:
+            cursor.execute("""
+                INSERT INTO company_details (company_name, company_address, gst_no, unit_name, unit_address)
+                VALUES (%s, %s, %s, %s, %s)
+            """, (company_name, company_address, gst_no, unit['unit_name'], unit['unit_address']))
+
+        # Insert users (admin + additional)
+        for user in users:
+            hashed_password = generate_password_hash(user['password'])
+
+            cursor.execute("""
+                INSERT INTO user_table (company_name, name, contact_no, email, password, unit_name, is_admin, is_active)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+            """, (
+                company_name,
+                user['username'],
+                user['contact'],
+                user['email'],
+                hashed_password,
+                user['unit_name'],
+                False,
+                True
+            ))
+
+        conn.commit()
+        return jsonify({'status': 'success', 'message': 'Company and users registered successfully'}), 201
+
+    except Exception as e:
+        print("DB Error:", str(e))
+        return jsonify({'status': 'error', 'message': str(e)}), 500
+
+    finally:
+        cursor.close()
+        conn.close()
+
+
+
+@app.route('/admin_dashboard', methods=['GET'])
+def admin_dashboard():
+    try:
+        conn = connect_db()
+        cursor = conn.cursor()
+
+        # Get distinct company names
+        cursor.execute("SELECT DISTINCT company_name FROM company_details")
+        companies = cursor.fetchall()  # returns list of tuples: [('AQUARELLE',), ('BOSCH',), ...]
+
+        return render_template('admin_dashboard.html', companies=companies)
+
+    except Exception as e:
+        print("Error:", e)
+        return "Error loading admin dashboard", 500
+
+    finally:
+        cursor.close()
+        conn.close()
+       
+@app.route('/product_registration', methods=['GET', 'POST'])
+def product_registartion():
+    return render_template('product_registration.html')        
+
+
 
 @app.route('/add_device', methods=['POST'])
 def add_admin():
@@ -544,6 +662,8 @@ def home():
 
 # ======================= WTS Microservice Integration START =======================
 
+sid_to_email = {}
+
 try:
     micro_client.connect(WTS_URL)
     print("Connected to WTS service.")
@@ -559,8 +679,10 @@ def wtstempsync():
 
     # Make request to microservice
     try:
-        response = requests.get(f'{WTS_URL}/home', params={'email': email})
+        response = requests.get(f'{WTS_URL}/wts_home', params={'email': email})
+        print("Response from microservice:", response)
         micro_data = response.json()
+        print("Response micro_data microservice:", micro_data)
 
         if micro_data.get('status') != 'success':
             return jsonify({'message': 'Error fetching device data'}), 500
@@ -695,25 +817,38 @@ def on_user_connect():
 @socketio.on('user_connected')
 def user_connected(data):
     email = data.get('email')
-    print(f"[Main] User connected: {email}")
-    micro_client.emit('start_stream', {'email': email})
+    sid = request.sid  # Grab actual request SID
+    sid_to_email[sid] = email
+
+    print(f"[Main] {email} connected with SID {sid}")
+    
+    join_room(sid)  # SID becomes the unique room name
+    micro_client.emit('start_stream', {'email': email, 'sid': sid})
 
 @micro_client.on('micro_data')
 def handle_micro_data(data):
-    socketio.emit('update_temperature', data)
+    room = data.get('room')
+    socketio.emit('update_temperature', data, room=room)
 
-# === SOCKET.IO FOR TEMPERATURE GRAPH FRONTEND ===
+# === SOCKET.IO FOR TEMPERATURE GRAPH FRONTEND ===   
 
 @socketio.on('temperature_graph_data')
 def temperature_graph_data(data):
     print("Received temperature graph data:", data )
     email = data.get('email')
-    print(f"[Main] User connected: {email}")
+    sid = request.sid  # Grab actual request SID
+    sid_to_email[sid] = email
+    
+    join_room(sid)  # SID becomes the unique room name
+    
+    data['sid'] = sid
+
     micro_client.emit('get_temperature_graph_data', data)
 
 @micro_client.on('micro_graph_data')
 def handle_micro_data(data):
-    socketio.emit('send_temperature_graph_data', data)
+    room = data.get('room')
+    socketio.emit('send_temperature_graph_data', data, room=room)
     
 @micro_client.on('micro_new_alert')
 def handle_alert_data(data):
@@ -737,10 +872,25 @@ except ConnectionError as e:  # ✅ Use imported ConnectionError
 
 @app.route('/running_light', methods=['GET', 'POST'])
 def running_light():
-
     return render_template('running_light.html')
 
 # ======================= MicroService For Running Light END ========================
+
+# ======================= MicroService For Office Light  START ========================
+try:
+    micro_client.connect(OFFICE_URL)
+    print("Connected to Office service.")
+except ConnectionError as e:  # ✅ Use imported ConnectionError
+    print(f"[WARNING] Could not connect to Office service at {OFFICE_URL}: {e}")
+
+
+
+@app.route('/office_light', methods=['GET', 'POST'])
+def office_light():
+    return render_template('office_light.html')
+
+# ======================= MicroService For Office Light END ========================
+
 
 # Route to handle favicon.ico requests and return a 404 response
 @app.route('/favicon.ico')
