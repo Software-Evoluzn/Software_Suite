@@ -36,7 +36,8 @@
             top: 10px;
             left: 10px;
         }
-        .admin_headline{
+
+        .admin_headline {
             display: flex;
             justify-content: space-between;
             align-items: center;
@@ -48,13 +49,19 @@
 
     <div class="p-3">
         <div class="admin_headline">
-            <h3 >Admin Dashboard</h3>
+            <h3>Admin Dashboard</h3>
             <!-- <img class="login_evoluzn_logo_img" src="../static/img/evoluzn_logo_rem_bg.png" alt=""> -->
         </div>
         <div class=" admin_dashboard_parent">
             {% for company in companies %}
-            <div class=" admin_dashboard_child" data-bs-toggle="modal" data-bs-target="#actionModal"> {{ company[0] }}</div>
-             {% endfor %}
+            <!-- <div class=" admin_dashboard_child" data-bs-toggle="modal" data-bs-target="#actionModal"> {{ company[0] }}</div> -->
+
+            <div class="admin_dashboard_child" data-company="{{ company[0] }}" onclick="setSelectedCompany(this)"
+                data-bs-toggle="modal" data-bs-target="#actionModal">
+                {{ company[0] }}
+            </div>
+
+            {% endfor %}
         </div>
     </div>
 
@@ -78,31 +85,53 @@
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 
     <script>
+        // function go_to_dashboard() {
+        //     alert("Add clicked");
+        //     const modal = bootstrap.Modal.getInstance(document.getElementById('actionModal'));
+        //     modal.hide();
+        // }
+
+        // function add_product() {
+        //     alert("Go clicked");
+        //     const modal = bootstrap.Modal.getInstance(document.getElementById('actionModal'));
+        //     modal.hide();
+        // }
+
+
+
+        let selectedCompany = '';
+
+        function setSelectedCompany(element) {
+            selectedCompany = element.getAttribute('data-company');
+        }
+
         function go_to_dashboard() {
-            alert("Add clicked");
+            alert("Dashboard clicked");  // Or remove if not used
             const modal = bootstrap.Modal.getInstance(document.getElementById('actionModal'));
             modal.hide();
         }
 
         function add_product() {
-            alert("Go clicked");
+            if (!selectedCompany) {
+                alert("No company selected.");
+                return;
+            }
             const modal = bootstrap.Modal.getInstance(document.getElementById('actionModal'));
             modal.hide();
+            window.location.href = `/product_registration?company=${encodeURIComponent(selectedCompany)}`;
         }
 
 
 
+        // const companyDivs = document.querySelectorAll('.admin_dashboard_child');
+        // companyDivs.forEach(div => {
+        //     div.addEventListener('click', () => {
+        //         const companyName = div.textContent.trim();
+        //         document.getElementById('actionModalLabel').textContent = `Choose an action for ${companyName}`;
+        //     });
+        // });
 
 
-    // const companyDivs = document.querySelectorAll('.admin_dashboard_child');
-    // companyDivs.forEach(div => {
-    //     div.addEventListener('click', () => {
-    //         const companyName = div.textContent.trim();
-    //         document.getElementById('actionModalLabel').textContent = `Choose an action for ${companyName}`;
-    //     });
-    // });
-
-    
 
     </script>
 

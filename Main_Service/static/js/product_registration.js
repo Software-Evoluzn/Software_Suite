@@ -1,12 +1,12 @@
 let productFormCount = 0;
 
 function addProductForm() {
-    const container = document.getElementById("productFormsContainer");
-    const formId = `product-form-${productFormCount++}`;
-    const serialContainerId = `${formId}-serials`;
-    const productTypeSelectId = `${formId}-product-type`;
+  const container = document.getElementById("productFormsContainer");
+  const formId = `product-form-${productFormCount++}`;
+  const serialContainerId = `${formId}-serials`;
+  const productTypeSelectId = `${formId}-product-type`;
 
-    const html = `
+  const html = `
     <div class="form-box" id="${formId}">
       <div class="d-flex justify-content-between align-items-center">
         <h6>Product Category</h6>
@@ -17,10 +17,12 @@ function addProductForm() {
         <div class="col-md-4">
           <label>Product Type</label>
           <select id="${productTypeSelectId}" class="form-select form-select-sm" onchange="handleProductTypeChange('${productTypeSelectId}', '${serialContainerId}')">
-            <option value="">Select Type</option>
-            <option value="Laptop">Laptop</option>
-            <option value="Mobile">Mobile</option>
-            <option value="Printer">Printer</option>
+          <option value="">Select Type</option>
+          ${availableProducts.map(p =>
+    `<option value="${p.product_name}">${p.product_name}</option>`
+  ).join('')
+    }  
+          
           </select>
         </div>
         <div class="col-md-4">   
@@ -42,16 +44,16 @@ function addProductForm() {
     </div>
   `;
 
-    container.insertAdjacentHTML('beforeend', html);
-    addSerialRow(serialContainerId, productTypeSelectId); // Add one serial by default
+  container.insertAdjacentHTML('beforeend', html);
+  addSerialRow(serialContainerId, productTypeSelectId); // Add one serial by default
 }
 
 function addSerialRow(containerId, productTypeSelectId) {
-    const rowId = `serial-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`;
-    const productType = document.getElementById(productTypeSelectId)?.value;
-    const showDuration = productType === "Mobile";
+  const rowId = `serial-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`;
+  const productType = document.getElementById(productTypeSelectId)?.value;
+  const showDuration = productType === "Mobile";
 
-    const html = `
+  const html = `
   <div class="serial-row" id="${rowId}">
     <span class="remove-serial text-danger" onclick="document.getElementById('${rowId}').remove()">✖</span>
     <div class="row">
@@ -101,25 +103,25 @@ function addSerialRow(containerId, productTypeSelectId) {
   </div>
 `;
 
-    document.getElementById(containerId).insertAdjacentHTML('beforeend', html);
+  document.getElementById(containerId).insertAdjacentHTML('beforeend', html);
 }
 
 function handleProductTypeChange(productTypeSelectId, serialContainerId) {
-    const type = document.getElementById(productTypeSelectId).value;
-    const serialContainer = document.getElementById(serialContainerId);
-    serialContainer.innerHTML = ''; // clear previous serials
-    addSerialRow(serialContainerId, productTypeSelectId);
+  const type = document.getElementById(productTypeSelectId).value;
+  const serialContainer = document.getElementById(serialContainerId);
+  serialContainer.innerHTML = ''; // clear previous serials
+  addSerialRow(serialContainerId, productTypeSelectId);
 }
 
 function toggleAllUsers(rowId) {
-    const isChecked = document.getElementById(`${rowId}-all`).checked;
-    const userCheckboxes = document.querySelectorAll(`.${rowId}-user`);
-    userCheckboxes.forEach(cb => cb.checked = isChecked);
+  const isChecked = document.getElementById(`${rowId}-all`).checked;
+  const userCheckboxes = document.querySelectorAll(`.${rowId}-user`);
+  userCheckboxes.forEach(cb => cb.checked = isChecked);
 }
 
 function checkIfAllSelected(rowId) {
-    const allCheckbox = document.getElementById(`${rowId}-all`);
-    const userCheckboxes = document.querySelectorAll(`.${rowId}-user`);
-    const allChecked = Array.from(userCheckboxes).every(cb => cb.checked);
-    allCheckbox.checked = allChecked;
+  const allCheckbox = document.getElementById(`${rowId}-all`);
+  const userCheckboxes = document.querySelectorAll(`.${rowId}-user`);
+  const allChecked = Array.from(userCheckboxes).every(cb => cb.checked);
+  allCheckbox.checked = allChecked;
 }

@@ -269,7 +269,7 @@ document.getElementById("registerFormElement").addEventListener("submit", functi
             unitData.push({
                 unit_name: unitName,
                 unit_address: unitAddress,
-                gst_no: unitGst
+                unit_gst: unitGst
             });
         }
     });

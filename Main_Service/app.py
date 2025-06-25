@@ -60,13 +60,14 @@ def create_tables():
     create_user_table_query = """
         CREATE TABLE IF NOT EXISTS user_table (
             id INT AUTO_INCREMENT PRIMARY KEY,
-            name VARCHAR(255) DEFAULT NULL,
+            company_name varchar(255) DEFAULT NULL,
             email VARCHAR(100) UNIQUE,
             password VARCHAR(255),
             is_active BOOLEAN DEFAULT TRUE,
             is_admin BOOLEAN DEFAULT FALSE,
             inserttimestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
             profile_img VARCHAR(255) DEFAULT NULL,
+            name varchar(255) DEFAULT NULL,
             contact_no VARCHAR(20) DEFAULT NULL,
             unit_name VARCHAR(255) DEFAULT NULL,
             contact_number VARCHAR(20) DEFAULT NULL
@@ -77,9 +78,10 @@ def create_tables():
             id INT AUTO_INCREMENT PRIMARY KEY,
             company_name VARCHAR(255) NOT NULL,
             company_address TEXT NOT NULL,
-            gst_no VARCHAR(50) UNIQUE NOT NULL,
+            gst_no VARCHAR(50) NOT NULL,
             unit_name VARCHAR(255),
             unit_address TEXT,
+            unit_gst VARCHAR(50) DEFAULT NULL,
             inserttimestamp DATETIME DEFAULT CURRENT_TIMESTAMP
         );
     """
@@ -137,6 +139,14 @@ def create_tables():
         );
     """)
 
+    product_query = ("""
+            CREATE TABLE IF NOT EXISTS product (
+                product_name VARCHAR(100) NOT NULL,
+                UNIQUE KEY unique_product_name (product_name)
+            );
+        """)
+
+
 
 
 
@@ -151,6 +161,7 @@ def create_tables():
         cursor.execute(temp_data_query)
         cursor.execute(pannel_table_query)
         cursor.execute(sensor_data_query)
+        cursor.execute(product_query)
         conn.commit()
         print("Tables created successfully.")
     except mysql.connector.Error as err:
@@ -500,11 +511,18 @@ def insert_company_details():
         cursor = conn.cursor()
 
         # Insert into company_details (1 entry per unit)
-        for unit in units:
+        if units:
+            for unit in units:
+                cursor.execute("""
+                    INSERT INTO company_details (company_name, company_address, gst_no, unit_name, unit_address, unit_gst)
+                    VALUES (%s, %s, %s, %s, %s,%s)
+                """, (company_name, company_address, gst_no, unit['unit_name'], unit['unit_address'], unit['unit_gst']))
+        else:
+        # Insert company record with NULL for unit details
             cursor.execute("""
-                INSERT INTO company_details (company_name, company_address, gst_no, unit_name, unit_address)
-                VALUES (%s, %s, %s, %s, %s)
-            """, (company_name, company_address, gst_no, unit['unit_name'], unit['unit_address']))
+                INSERT INTO company_details (company_name, company_address, gst_no, unit_name, unit_address, unit_gst)
+                VALUES (%s, %s, %s, NULL, NULL,NULL)
+            """, (company_name, company_address, gst_no))
 
         # Insert users (admin + additional)
         for user in users:
@@ -558,15 +576,21 @@ def admin_dashboard():
         conn.close()
        
 @app.route('/product_registration', methods=['GET', 'POST'])
-def product_registartion():
-    return render_template('product_registration.html')        
+def product_registration():
+    company = request.args.get('company')
+    print("Company name in product registration:", company)
 
+    conn = connect_db()
+    cursor = conn.cursor(dictionary=True)
+    cursor.execute("SELECT * FROM product")
+    products = cursor.fetchall()
+    return render_template('product_registration.html', company=company, products=products)
 
 
 @app.route('/add_device', methods=['POST'])
 def add_admin():
     data = request.get_json()
-    company_name = data.get('company_name')
+    company_name = data.get('company_name')  
     device_data = data.get('device_data')
     device_duration = data.get('device_duration')
 
