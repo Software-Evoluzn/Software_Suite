@@ -321,7 +321,7 @@ def insert_alert(device_name, message):
             'timestamp': current_time.strftime('%Y-%m-%d %H:%M:%S')
         }
         print("frontend:", alert_data)
-        socketio.emit('micro_new_alert', alert_data, room=request.sid)
+        socketio.emit('micro_new_alert', alert_data)
 
     except mysql.connector.Error as err:
         print(f"❌ MySQL Error: {err}")
@@ -566,7 +566,7 @@ def get_latest_device_data(user_email):
         cursor.execute("""
             SELECT id AS device_id, device_name, graph_duration
             FROM device_table
-            WHERE company_name = %s AND is_active = 1
+            WHERE company_name = %s AND is_active = 1 AND device_type = 'Temperature Sensor'
         """, (company_name,))
         devices = cursor.fetchall()
 
@@ -695,15 +695,16 @@ def on_connect():
 def on_start_stream(data):
     """Handle client connection with email from frontend."""
     email = data.get('email')
+    sid = data.get('sid')
     print("Received email from frontend:", email)
     
     if email:
         print(f"Starting background task for {email}")
-        socketio.start_background_task(send_live_data, email)
+        socketio.start_background_task(send_live_data, email, room=sid)
     else:
         print("Email not received in start_stream event.")
 
-def send_live_data(user_email):
+def send_live_data(user_email, room):
     """Emit latest data to frontend every 60 seconds."""
     while True:
         received_data = get_latest_device_data(user_email)
@@ -711,8 +712,9 @@ def send_live_data(user_email):
         # socketio.emit('update_temperature', {'final_data': received_data[0], 'result': received_data[1]})
         socketio.emit('micro_data', {
             'final_data': received_data[0],
-            'result': received_data[1]
-        }, room=request.sid)
+            'result': received_data[1],
+            'room': room
+        })
         time.sleep(60)
 
 
@@ -780,7 +782,7 @@ def dashboard():
         devices=devices
     )
 
-@app.route('/home', methods=['POST', 'GET'])
+@app.route('/wts_home', methods=['POST', 'GET'])
 def home():
 
     user_email = request.args.get('email')
@@ -1020,6 +1022,9 @@ def publish_threshold():
 def get_temperature_graph_data(data):
     try:
         print("Selected Data for temperature_graph_data graph:", data)
+        sid = data.get('sid')
+
+        print("Socket ID:", sid)
         user_email = data.get('email', None)
         
         if user_email:
@@ -1073,7 +1078,7 @@ def get_temperature_graph_data(data):
         print("Phases:---------", phases)    
         if not phases:
             print(f"No phases found for panel_name '{controlGraph}'.")
-            socketio.emit('micro_graph_data', [], room=request.sid)
+            socketio.emit('micro_graph_data', {'data': [], 'room': sid})
             return
 
         # Extract the phase columns (e.g., 'R1', 'Y1', 'B1', etc.)
@@ -1083,7 +1088,9 @@ def get_temperature_graph_data(data):
 
         if len(phase_columns) == 0:
             print("No valid phase columns found.")
-            socketio.emit('micro_graph_data', [], room=request.sid)
+            # socketio.emit('micro_graph_data', [], room=sid)
+            socketio.emit('micro_graph_data', {'data': [], 'room': sid})
+
             return
 
         # Build dynamic SQL for temperature graph based on phase columns
@@ -1124,12 +1131,13 @@ def get_temperature_graph_data(data):
             formatted_data.append(row_data)
 
         print("Sending data bro:")
-        socketio.emit('micro_graph_data', {'data': formatted_data, 'phase_values': filtered_device_id, 'threshold': threshold, 'graph_duration': graph_duration}, room=request.sid)
+        socketio.emit('micro_graph_data', {'data': formatted_data, 'phase_values': filtered_device_id, 'threshold': threshold, 'graph_duration': graph_duration, 'room': sid})
 
 
     except Exception as e:
         print("Database query failed:", e)
-        socketio.emit('micro_graph_data', [], room=request.sid)
+        socketio.emit('micro_graph_data', {'data': [], 'room': sid})
+
 
 
 connect_mqtt()
