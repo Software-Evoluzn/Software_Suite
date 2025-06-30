@@ -72,7 +72,8 @@ def create_tables():
             contact_no VARCHAR(20) DEFAULT NULL,
             unit_name VARCHAR(255) DEFAULT NULL,
             contact_number VARCHAR(20) DEFAULT NULL,
-            contact_person BOOLEAN DEFAULT FALSE
+            contact_person BOOLEAN DEFAULT FALSE,
+            
         );
     """
     create_company_details_query = """
@@ -157,6 +158,10 @@ def create_tables():
             serial_number VARCHAR(100) NOT NULL UNIQUE
         );
     """)
+
+
+
+
 
     # ALTER TABLE alert_temp ADD UNIQUE unique_index (device_name, timestamp)
     conn.commit()
@@ -598,7 +603,6 @@ def product_registration():
     companies=cursor.fetchall()
     cursor.execute("SELECT * from user_table where company_name = %s", (company,))
     users = cursor.fetchall()
-    print("Companies in product registration:", users)
     return render_template('product_registration.html', company=company, products=products, companies=companies,users=users)
 
 
