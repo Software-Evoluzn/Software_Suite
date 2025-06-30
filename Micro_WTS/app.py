@@ -784,7 +784,6 @@ def dashboard():
 
 @app.route('/wts_home', methods=['POST', 'GET'])
 def home():
-
     user_email = request.args.get('email')
     
     conn = connect_db()

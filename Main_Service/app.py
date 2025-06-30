@@ -21,7 +21,7 @@ socketio = SocketIO(app, cors_allowed_origins="*")
 # === SOCKET.IO CLIENT TO MICRO SERVICE ===
 micro_client = socketio_client.Client()
 
-WTS_URL = 'http://192.168.0.224:5002'
+WTS_URL = 'http://192.168.0.223:5002'
 RUNNING_URL = 'http://192.168.0.224:5003'
 OFFICE_URL = 'http://192.168.0.224:5004'
 
@@ -60,7 +60,8 @@ def create_tables():
     create_user_table_query = """
         CREATE TABLE IF NOT EXISTS user_table (
             id INT AUTO_INCREMENT PRIMARY KEY,
-            company_name varchar(255) DEFAULT NULL,
+            company_name VARCHAR(255) DEFAULT NULL,
+            name VARCHAR(255) DEFAULT NULL,
             email VARCHAR(100) UNIQUE,
             password VARCHAR(255),
             is_active BOOLEAN DEFAULT TRUE,
@@ -70,7 +71,8 @@ def create_tables():
             name varchar(255) DEFAULT NULL,
             contact_no VARCHAR(20) DEFAULT NULL,
             unit_name VARCHAR(255) DEFAULT NULL,
-            contact_number VARCHAR(20) DEFAULT NULL
+            contact_number VARCHAR(20) DEFAULT NULL,
+            contact_person BOOLEAN DEFAULT FALSE
         );
     """
     create_company_details_query = """
@@ -145,10 +147,16 @@ def create_tables():
                 UNIQUE KEY unique_product_name (product_name)
             );
         """)
-
-
-
-
+    
+    product_details_query = ("""
+        CREATE TABLE product_details (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            product_type VARCHAR(100) NOT NULL,
+            date_of_purchase DATE NOT NULL,
+            warranty_period INT NOT NULL,  -- assuming this is in months; change if needed
+            serial_number VARCHAR(100) NOT NULL UNIQUE
+        );
+    """)
 
     # ALTER TABLE alert_temp ADD UNIQUE unique_index (device_name, timestamp)
     conn.commit()
@@ -162,6 +170,7 @@ def create_tables():
         cursor.execute(pannel_table_query)
         cursor.execute(sensor_data_query)
         cursor.execute(product_query)
+        cursor.execute(product_details_query)
         conn.commit()
         print("Tables created successfully.")
     except mysql.connector.Error as err:
@@ -501,6 +510,7 @@ def insert_company_details():
     company_address = data.get('company_address')
     gst_no = data.get('gst_no')
     units = data.get('units', [])
+    print("Inserting units:", units)
     users = data.get('users', [])
 
     if not all([company_name, company_address, gst_no]):
@@ -515,14 +525,16 @@ def insert_company_details():
             for unit in units:
                 cursor.execute("""
                     INSERT INTO company_details (company_name, company_address, gst_no, unit_name, unit_address, unit_gst)
-                    VALUES (%s, %s, %s, %s, %s,%s)
+                    VALUES (%s, %s, %s, %s, %s, %s)
                 """, (company_name, company_address, gst_no, unit['unit_name'], unit['unit_address'], unit['unit_gst']))
+
         else:
         # Insert company record with NULL for unit details
             cursor.execute("""
                 INSERT INTO company_details (company_name, company_address, gst_no, unit_name, unit_address, unit_gst)
-                VALUES (%s, %s, %s, NULL, NULL,NULL)
+                VALUES (%s, %s, %s, NULL, NULL, NULL)
             """, (company_name, company_address, gst_no))
+
 
         # Insert users (admin + additional)
         for user in users:
@@ -553,8 +565,6 @@ def insert_company_details():
         cursor.close()
         conn.close()
 
-
-
 @app.route('/admin_dashboard', methods=['GET'])
 def admin_dashboard():
     try:
@@ -584,15 +594,21 @@ def product_registration():
     cursor = conn.cursor(dictionary=True)
     cursor.execute("SELECT * FROM product")
     products = cursor.fetchall()
-    return render_template('product_registration.html', company=company, products=products)
+    cursor.execute("SELECT * from company_details where company_name = %s", (company,))
+    companies=cursor.fetchall()
+    cursor.execute("SELECT * from user_table where company_name = %s", (company,))
+    users = cursor.fetchall()
+    print("Companies in product registration:", users)
+    return render_template('product_registration.html', company=company, products=products, companies=companies,users=users)
 
 
 @app.route('/add_device', methods=['POST'])
 def add_admin():
     data = request.get_json()
-    company_name = data.get('company_name')  
-    device_data = data.get('device_data')
-    device_duration = data.get('device_duration')
+    company_name = data.get('company_name')
+    product_data = data.get('product_data')
+
+    print("Received data:", data)
 
     token = request.cookies.get('token')
     if not token:
@@ -700,6 +716,8 @@ def wtstempsync():
     user_id = result.get('user_id')
     email = result.get('email')
     name = result.get('company_name')
+
+    print("wtstempsync page", email)
 
     # Make request to microservice
     try:
