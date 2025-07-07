@@ -155,7 +155,8 @@ def create_tables():
             product_type VARCHAR(100) NOT NULL,
             date_of_purchase DATE NOT NULL,
             warranty_period INT NOT NULL,  -- assuming this is in months; change if needed
-            serial_number VARCHAR(100) NOT NULL UNIQUE
+            serial_number VARCHAR(100) NOT NULL UNIQUE,
+            user_access VARCHAR(255) NOT NULL,     
         );
     """)
 
@@ -606,6 +607,75 @@ def product_registration():
     return render_template('product_registration.html', company=company, products=products, companies=companies,users=users)
 
 
+# @app.route('/add_device', methods=['POST'])
+# def add_admin():
+#     data = request.get_json()
+#     company_name = data.get('company_name')
+#     product_data = data.get('product_data')
+
+#     print("Received data:", data)
+
+#     token = request.cookies.get('token')
+#     if not token:
+#         return redirect('/')  # No token, go to login
+
+#     try:
+#         payload = jwt.decode(token, SECRET_KEY, algorithms=['HS256'])
+#     except (jwt.ExpiredSignatureError, jwt.InvalidTokenError):
+#         return redirect('/')  # Invalid or expired token, go to login
+
+#     email = payload.get('email')
+
+#     conn = connect_db()
+#     cursor = conn.cursor(dictionary=True)
+
+#     try:
+#         # Step 1: Validate admin
+#         cursor.execute(
+#             "SELECT company_name, is_admin FROM user_table WHERE email = %s",
+#             (email,)
+#         )
+#         user = cursor.fetchone()
+        
+#         if not user:
+#             return jsonify({"status": "error", "message": "User not found"}), 404
+
+#         if not user['is_admin']:
+#             return jsonify({"status": "error", "message": "You are not authorized to add devices."}), 403
+
+#         if not company_name or not device_data:
+#             return jsonify({"status": "error", "message": "Missing company name or device data"}), 400
+
+#         # Step 2: Insert all devices
+#         insert_query = """
+#             INSERT INTO device_table (company_name, device_type, device_name, graph_duration)
+#             VALUES (%s, %s, %s, %s)
+#         """
+#         new_device_ids = []
+#         for device in device_data:
+#             device_type = device.get('device_type')
+#             device_name = device.get('device_name')
+
+#             if not device_type or not device_name:
+#                 continue  # Skip invalid data
+
+#             cursor.execute(insert_query, (company_name, device_type, device_name, device_duration))
+#             new_device_ids.append(cursor.lastrowid)
+#             create_panels_for_devices(cursor)
+
+#         # print("radhe radhe", new_device_ids)
+#         conn.commit()
+
+#         return jsonify({"status": "success", "message": "Devices and panels added successfully!"})
+
+#     except mysql.connector.Error as err:
+#         print(f"Database Error: {err}")
+#         return jsonify({"status": "error", "message": "Database error occurred."}), 500
+
+#     finally:
+#         cursor.close()
+#         conn.close()
+
 @app.route('/add_device', methods=['POST'])
 def add_admin():
     data = request.get_json()
@@ -616,12 +686,16 @@ def add_admin():
 
     token = request.cookies.get('token')
     if not token:
+        if request.is_json:
+            return jsonify({"status": "error", "message": "Unauthorized: No token"}), 401
         return redirect('/')  # No token, go to login
 
     try:
         payload = jwt.decode(token, SECRET_KEY, algorithms=['HS256'])
     except (jwt.ExpiredSignatureError, jwt.InvalidTokenError):
-        return redirect('/')  # Invalid or expired token, go to login
+         if request.is_json:
+                return jsonify({"status": "error", "message": "Invalid or expired token"}), 401
+         return redirect('/')  # Invalid or expired token, go to login
 
     email = payload.get('email')
 
@@ -635,37 +709,57 @@ def add_admin():
             (email,)
         )
         user = cursor.fetchone()
-        
+
         if not user:
             return jsonify({"status": "error", "message": "User not found"}), 404
 
         if not user['is_admin']:
             return jsonify({"status": "error", "message": "You are not authorized to add devices."}), 403
 
-        if not company_name or not device_data:
-            return jsonify({"status": "error", "message": "Missing company name or device data"}), 400
+        if not company_name or not product_data:
+            return jsonify({"status": "error", "message": "Missing company name or product data"}), 400
 
-        # Step 2: Insert all devices
-        insert_query = """
-            INSERT INTO device_table (company_name, device_type, device_name, graph_duration)
-            VALUES (%s, %s, %s, %s)
+        # --- Optional: Handle device_data here only if needed ---
+        # If you no longer use deviceData, comment this block or adapt it.
+        # Example placeholder:
+        # device_data = data.get('device_data', [])
+
+        # --- Step 2: Insert into product_details ---
+        product_insert_query = """
+            INSERT INTO product_details (product_type, date_of_purchase, warranty_period, serial_number, user_access)
+            VALUES (%s, %s, %s, %s, %s)
         """
-        new_device_ids = []
-        for device in device_data:
-            device_type = device.get('device_type')
-            device_name = device.get('device_name')
 
-            if not device_type or not device_name:
-                continue  # Skip invalid data
+        for product in product_data:
+            product_type = product.get('product_type')
+            date_of_purchase = product.get('date_of_purchase')
+            warranty_period = product.get('warranty_period')
+            serials = product.get('serials', [])
 
-            cursor.execute(insert_query, (company_name, device_type, device_name, device_duration))
-            new_device_ids.append(cursor.lastrowid)
-            create_panels_for_devices(cursor)
+            for serial in serials:
+                serial_number = serial.get('serial_number')
+                user_access_list = serial.get('user_access', [])
+                user_access_str = ', '.join(user_access_list)
 
-        # print("radhe radhe", new_device_ids)
+                # Validate before inserting
+                if not all([product_type, date_of_purchase, warranty_period, serial_number]):
+                    continue  # Skip if any value missing
+
+                try:
+                    cursor.execute(product_insert_query, (
+                        product_type,
+                        date_of_purchase,
+                        int(warranty_period),
+                        serial_number,
+                        user_access_str
+                    ))
+                except mysql.connector.Error as err:
+                    print(f"Error inserting serial '{serial_number}': {err}")
+                    continue
+
         conn.commit()
 
-        return jsonify({"status": "success", "message": "Devices and panels added successfully!"})
+        return jsonify({"status": "success", "message": "Products registered successfully!"})
 
     except mysql.connector.Error as err:
         print(f"Database Error: {err}")
@@ -674,6 +768,7 @@ def add_admin():
     finally:
         cursor.close()
         conn.close()
+
 
 @app.route('/logout')
 def logout():
