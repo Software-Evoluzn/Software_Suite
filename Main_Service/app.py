@@ -12,6 +12,11 @@ from socketio.exceptions import ConnectionError
 import paho.mqtt.client as mqtt
 import random
 from flask_cors import CORS
+# from datetime import timezone
+from datetime import datetime, timedelta, timezone
+
+
+
 # from flask_socketio import join_room
 
 app = Flask(__name__)
@@ -68,7 +73,6 @@ def create_tables():
             is_admin BOOLEAN DEFAULT FALSE,
             inserttimestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
             profile_img VARCHAR(255) DEFAULT NULL,
-            name varchar(255) DEFAULT NULL,
             contact_no VARCHAR(20) DEFAULT NULL,
             unit_name VARCHAR(255) DEFAULT NULL,
             contact_number VARCHAR(20) DEFAULT NULL,
@@ -156,7 +160,7 @@ def create_tables():
             date_of_purchase DATE NOT NULL,
             warranty_period INT NOT NULL,  -- assuming this is in months; change if needed
             serial_number VARCHAR(100) NOT NULL UNIQUE,
-            user_access VARCHAR(255) NOT NULL,     
+            user_access VARCHAR(255) NOT NULL  
         );
     """)
 
@@ -290,6 +294,7 @@ def on_message(client, userdata, message):
     try:
         print("on_message called")
         payload = message.payload.decode()
+        print("Decoded payload:", payload)
         topic = message.topic
         conn = connect_db()
         cursor = conn.cursor()
@@ -486,7 +491,7 @@ def login():
             'user_id': user_id,
             'CompanyName': Company_name,
             'email': email,
-            'exp': datetime.datetime.now(datetime.timezone.utc) + datetime.timedelta(days=2)
+            'exp': datetime.now(timezone.utc) + timedelta(days=2)
         }
 
         # Generate JWT token
@@ -795,7 +800,7 @@ def home():
     result = get_user_name_from_token()
     print("wtstempsync page", result)
     name = result.get('company_name', 'Guest')
-
+    print("Company name:", name)
     return render_template('main_dashboard.html', name=name)
 
 
