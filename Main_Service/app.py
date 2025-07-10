@@ -795,13 +795,63 @@ def logout():
     return resp
 
 
+# @app.route('/home')
+# def home():
+#     result = get_user_name_from_token()
+#     print("wtstempsync page", result)
+#     name = result.get('company_name', 'Guest')
+#     print("Company name:", name)
+#     return render_template('main_dashboard.html', name=name)
+
 @app.route('/home')
 def home():
     result = get_user_name_from_token()
     print("wtstempsync page", result)
-    name = result.get('company_name', 'Guest')
-    print("Company name:", name)
-    return render_template('main_dashboard.html', name=name)
+    
+    company_name = result.get('company_name', 'Guest')
+    user_email = result.get('email')
+    
+    # Fetch user name from user_table using email
+    conn = connect_db()
+    cursor = conn.cursor()
+    query_user = "SELECT name FROM user_table WHERE email = %s"
+    cursor.execute(query_user, (user_email,))
+    row = cursor.fetchone()
+    cursor.close()
+    
+    if row:
+        user_name = row[0]  # Extract name from result
+    else:
+        user_name = 'Guest'
+    
+    print("User name:", user_name)
+    
+    # Fetch devices for the user
+    cursor = conn.cursor(dictionary=True)
+    query_devices = """
+        SELECT serial_number, product_type FROM product_details
+        WHERE FIND_IN_SET(%s, user_access) > 0
+    """
+    cursor.execute(query_devices, (user_name,))
+    rows = cursor.fetchall()
+    print("Rows fetched:", rows)
+    cursor.close()
+    
+    # Group devices by product_type
+    device_types = {}
+    for row in rows:
+        product_type = row['product_type']
+        serial_number = row['serial_number']
+        if product_type not in device_types:
+            device_types[product_type] = []
+        device_types[product_type].append(serial_number)
+    
+    print("Device types:", device_types)
+    
+    # Pass to template
+    return render_template('main_dashboard.html', name=company_name, user_name=user_name, device_types=device_types)
+
+
 
 
 # ======================= WTS Microservice Integration START =======================
