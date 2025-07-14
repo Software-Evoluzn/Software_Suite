@@ -78,7 +78,6 @@ def create_tables():
             is_admin BOOLEAN DEFAULT FALSE,
             inserttimestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
             profile_img VARCHAR(255) DEFAULT NULL,
-            name varchar(255) DEFAULT NULL,
             contact_no VARCHAR(20) DEFAULT NULL,
             unit_name VARCHAR(255) DEFAULT NULL,
             contact_number VARCHAR(20) DEFAULT NULL,
@@ -167,13 +166,13 @@ def create_tables():
             date_of_purchase DATE NOT NULL,
             warranty_period INT NOT NULL,  -- assuming this is in months; change if needed
             serial_number VARCHAR(100) NOT NULL UNIQUE,
-<<<<<<< Updated upstream
-            user_access VARCHAR(255) NOT NULL  
-=======
             user_access VARCHAR(255) NOT NULL
->>>>>>> Stashed changes
         );
     """)
+
+
+
+
 
 
 
@@ -306,6 +305,7 @@ def on_message(client, userdata, message):
     try:
         print("on_message called")
         payload = message.payload.decode()
+        print("Decoded payload:", payload)
         print("Decoded payload:", payload)
         topic = message.topic
         conn = connect_db()
@@ -774,11 +774,16 @@ def add_admin():
     if not token:
         if request.is_json:
             return jsonify({"status": "error", "message": "Unauthorized: No token"}), 401
+        if request.is_json:
+            return jsonify({"status": "error", "message": "Unauthorized: No token"}), 401
         return redirect('/')  # No token, go to login
 
     try:
         payload = jwt.decode(token, SECRET_KEY, algorithms=['HS256'])
     except (jwt.ExpiredSignatureError, jwt.InvalidTokenError):
+         if request.is_json:
+                return jsonify({"status": "error", "message": "Invalid or expired token"}), 401
+         return redirect('/')  # Invalid or expired token, go to login
          if request.is_json:
                 return jsonify({"status": "error", "message": "Invalid or expired token"}), 401
          return redirect('/')  # Invalid or expired token, go to login
@@ -796,12 +801,15 @@ def add_admin():
         )
         user = cursor.fetchone()
 
+
         if not user:
             return jsonify({"status": "error", "message": "User not found"}), 404
 
         if not user['is_admin']:
             return jsonify({"status": "error", "message": "You are not authorized to add devices."}), 403
 
+        if not company_name or not product_data:
+            return jsonify({"status": "error", "message": "Missing company name or product data"}), 400
         if not company_name or not product_data:
             return jsonify({"status": "error", "message": "Missing company name or product data"}), 400
 
@@ -812,20 +820,12 @@ def add_admin():
 
         # --- Step 2: Insert into product_details ---
         product_insert_query = """
-<<<<<<< Updated upstream
-            INSERT INTO product_details (product_type, date_of_purchase, warranty_period, serial_number, user_access)
-            VALUES (%s, %s, %s, %s, %s)
-        """
-
-        for product in product_data:
-=======
             INSERT INTO product_details (company_name, product_type, date_of_purchase, warranty_period, serial_number, user_access)
             VALUES (%s, %s, %s, %s, %s, %s)
         """
 
         for product in product_data:
             company_name = company_name  # Use provided or default company name
->>>>>>> Stashed changes
             product_type = product.get('product_type')
             date_of_purchase = product.get('date_of_purchase')
             warranty_period = product.get('warranty_period')
@@ -842,10 +842,7 @@ def add_admin():
 
                 try:
                     cursor.execute(product_insert_query, (
-<<<<<<< Updated upstream
-=======
                         company_name,
->>>>>>> Stashed changes
                         product_type,
                         date_of_purchase,
                         int(warranty_period),
@@ -859,6 +856,7 @@ def add_admin():
         conn.commit()
 
         return jsonify({"status": "success", "message": "Products registered successfully!"})
+        return jsonify({"status": "success", "message": "Products registered successfully!"})
 
     except mysql.connector.Error as err:
         print(f"Database Error: {err}")
@@ -867,6 +865,7 @@ def add_admin():
     finally:
         cursor.close()
         conn.close()
+
 
 
 @app.route('/logout')
@@ -888,6 +887,14 @@ def logout():
 
     return resp
 
+
+# @app.route('/home')
+# def home():
+#     result = get_user_name_from_token()
+#     print("wtstempsync page", result)
+#     name = result.get('company_name', 'Guest')
+#     print("Company name:", name)
+#     return render_template('main_dashboard.html', name=name)
 
 @app.route('/home')
 def home():
