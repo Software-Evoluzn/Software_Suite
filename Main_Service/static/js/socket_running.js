@@ -1,7 +1,8 @@
 document.addEventListener('DOMContentLoaded', function () {
-    const socket = io('http://192.168.1.12:5007');
+    const socket = io('http://192.168.1.18:5000');
     const deviceIds = Array.from(document.querySelectorAll('[data-device-id]')).map(el => el.dataset.deviceId);
     console.log("deviceIdsdeviceIdsdeviceIds", deviceIds)
+
     deviceIds.forEach(deviceId => {
         const timeSelectElem = document.getElementById(`timeSelect_running_${deviceId}`);
         const graphSelectElem = document.getElementById(`graphSelect_running_${deviceId}`);
@@ -470,7 +471,7 @@ document.addEventListener('DOMContentLoaded', function () {
                         },
                     },
                 });
-                
+
                 // Adjust the wrapper width dynamically
                 const wrapper = ctx.canvas.closest('.main_canvas_wrapper');
                 if (labels.length < 5) {
@@ -479,9 +480,10 @@ document.addEventListener('DOMContentLoaded', function () {
                     const calculatedWidth = Math.max(100, 6 * labels.length) + '%'; // Dynamic width calculation
                     wrapper.style.width = calculatedWidth;
                 }
-                
+
             }
         });
+
 
 
         const daySelect = document.getElementById(`running_light_power_consumption_weekday_dropdown${deviceId}`);
@@ -539,6 +541,121 @@ document.addEventListener('DOMContentLoaded', function () {
         });
         updateGraph('daily-individual', 'power-consumption');
     });
+
+
+    socket.on('office', function (data_office) {
+        console.log('Received office data:', data_office);
+        handleOfficeData(data_office);
+    });
+
+    function handleOfficeData(data_office) {
+        console.log('officeDATA', data_office);
+
+        // 🚨 Only handle valid payloads that start with 'device_id:'
+        if (typeof data_office === 'string' && data_office.startsWith("device_id:")) {
+            const deviceData = data_office.split(":");
+
+            if (deviceData.length >= 9) {
+                const intensityValue = deviceData[2];
+                const switchStatus = deviceData[3];   // e.g. 1 or 0
+                const deviceId = deviceData[8];       // e.g. officeF0BF09
+
+                const checkbox = document.getElementById(`${deviceId}/control`);
+                if (checkbox) {
+                    checkbox.checked = switchStatus === "1";
+
+                    const statusBox = document.getElementById(`office_${deviceId}`);
+                    if (statusBox) {
+                        statusBox.style.backgroundColor = checkbox.checked ? '#3965ff' : '#f3f3f3';
+                    }
+
+                    console.log("inside toggle switch", checkbox.checked, deviceId);
+                } else {
+                    console.warn(`Checkbox not found for ID: ${deviceId}/control`);
+                }
+
+
+
+                // 🔁 Update range slider
+                const rangeSlider = document.getElementById(`officerangeValueIndividual_${deviceId}`);
+                if (rangeSlider) {
+                    rangeSlider.value = intensityValue;
+                } else {
+                    console.warn(`Range slider not found: officerangeValueIndividual_${deviceId}`);
+                }
+
+                // 🔁 Update intensity percentage display
+                const percentDisplay = document.getElementById(`officerangeDisplayIndividual_${deviceId}`);
+                if (percentDisplay) {
+                    percentDisplay.textContent = `${intensityValue}%`;
+                } else {
+                    console.warn(`Percent display not found: officerangeDisplayIndividual_${deviceId}`);
+                }
+
+                // ✅ Remove the listener only after successful toggle
+                socket.off('office', handleOfficeData);
+            } else {
+                console.warn("deviceData format unexpected:", deviceData);
+            }
+        } else {
+            console.warn("Skipped invalid office data:", data_office);
+        }
+    }
+
+    // 🔁 Range slider for individual office light intensity
+    const sliders = document.querySelectorAll(".dashboard_smart_led1_range2");
+
+    sliders.forEach((slider) => {
+        const sliderId = slider.id;
+        const deviceId = sliderId.replace("officerangeValueIndividual_", "");
+
+        // Live UI feedback
+        slider.addEventListener("input", function () {
+            const intensity = slider.value;
+            const display = document.getElementById(`rangeDisplayIndividual_${deviceId}`);
+            const percentDisplay = document.getElementById(`officerangeDisplayIndividual_${deviceId}`);
+
+            if (display) display.textContent = `${intensity}%`;
+            if (percentDisplay) percentDisplay.textContent = `${intensity}%`;
+        });
+
+        // Backend update only when change is complete
+        slider.addEventListener("change", function () {
+            const intensity = slider.value;
+            updateIntensity(deviceId, intensity);
+        });
+    });
+
+
+
+    function updateIntensity(deviceId, intensityValue) {
+
+        const cleanDeviceId = deviceId.replace(/^officeoffice/, "office");
+        const topic = `${cleanDeviceId}/control`; // Adjust based on your MQTT topic structure
+
+        fetch("/intensity_office_individual", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+                topic: topic,
+                ledIntensity: intensityValue,
+            }),
+        })
+            .then((response) => response.json())
+            .then((data) => {
+                if (data.success) {
+                    console.log(`✅ Intensity updated for ${deviceId}`);
+                } else {
+                    console.error(`❌ Error for ${deviceId}:`, data.error);
+                }
+            })
+            .catch((error) => {
+                console.error(`❌ Fetch failed for ${deviceId}:`, error);
+            });
+    }
+
 });
 
 
@@ -604,7 +721,7 @@ function downloadFileRunning(buttonElement) {
     };
     console.log('Request Params:', params);
 
-    const urlEndpoint = '/download_xlsx_indivisual_running_light';
+    const urlEndpoint = '/download_xlsx_individual_office_light';
 
     fetch(urlEndpoint, {
         method: 'POST',
@@ -650,3 +767,4 @@ function formatDate(date) {
     if (isNaN(parsedDate)) return null;
     return parsedDate.toISOString().split('T')[0];
 }
+

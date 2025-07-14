@@ -26,16 +26,13 @@
 
 <body class="running_light_body">
 
-  <div id="sidebar-placeholder">
-    {% include 'navbar_backup.html' %}
-  </div>
-  <!-- MAIN CONTAINER -->
-
+  {% include 'navbar_backup.html' %}
+  <!-- Main Content Area -->
   <main class="main-content">
     <!-- Main content goes here -->
 
     {% for device_type, device_ids in ids.items() %}
-    {% if device_type == 'office' and device_ids %}
+    {% if device_type == 'tube' and device_ids %}
     {% for device_id in device_ids %}
     <div class="dashboard_all_main_div1">
       <div class="row">
@@ -61,19 +58,15 @@
               <div class="dashboard_light_intensity_title">Light Intensity</div>
 
               <div class="dashboard_online_status_box">
-                <div class="dashboard_online_status" id="office_{{ device_id }}"></div>
+                <div class="dashboard_online_status" id="tube_{{ device_id }}"></div>
               </div>
               <div class="dashboard_smart_led1_range_div">
-                <!-- <input class="dashboard_smart_led1_range2 dashboard_range_color2"
-                  id="officerangeValueIndividual_{{ device_id }}" type="range" min="0" max="100" value="0" /> -->
                 <input class="dashboard_smart_led1_range2 dashboard_range_color2"
-                  id="officerangeValueIndividual_{{ device_id }}" type="range" min="0" max="100" value="0" />
-
+                  id="rangeValueIndividual_{{ device_id }}" type="range" min="0" max="100" value="0" />
               </div>
-              <div class="dashboard_percent2" id="officerangeDisplayIndividual_{{ device_id }}">0%</div>
-              <!-- <div class="dashboard_percent2" id="officerangeDisplayIndividual_{{ device_id }}">0%</div> -->
+              <div class="dashboard_percent2" id="rangeDisplayIndividual_{{ device_id }}">0%</div>
 
-              <!-- <script>
+              <script>
                 document.addEventListener('DOMContentLoaded', function () {
                   const sliders = document.querySelectorAll('.dashboard_smart_led1_range2');
                   sliders.forEach(slider => {
@@ -113,7 +106,7 @@
                     });
                   });
                 });
-              </script> -->
+              </script>
 
               <div class="dashboard_power_consumption_value">
                 <div class="dashboard_power_title">Power</div>
@@ -200,7 +193,6 @@
                   <div class="main_canvas_wrapper">
                     <canvas id="myChart_{{device_id}}" class="main_power_consumption_graph_main_div"
                       data-device-id="{{ device_id }}"></canvas>
-
                   </div>
                 </div>
               </div>
