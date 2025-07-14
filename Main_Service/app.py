@@ -83,6 +83,7 @@ def create_tables():
             unit_name VARCHAR(255) DEFAULT NULL,
             contact_number VARCHAR(20) DEFAULT NULL,
             contact_person BOOLEAN DEFAULT FALSE
+            
         );
     """
     create_company_details_query = """
@@ -161,11 +162,16 @@ def create_tables():
     product_details_query = ("""
         CREATE TABLE product_details (
             id INT AUTO_INCREMENT PRIMARY KEY,
+            company_name VARCHAR(50) NOT NULL,
             product_type VARCHAR(100) NOT NULL,
             date_of_purchase DATE NOT NULL,
             warranty_period INT NOT NULL,  -- assuming this is in months; change if needed
             serial_number VARCHAR(100) NOT NULL UNIQUE,
+<<<<<<< Updated upstream
             user_access VARCHAR(255) NOT NULL  
+=======
+            user_access VARCHAR(255) NOT NULL
+>>>>>>> Stashed changes
         );
     """)
 
@@ -267,7 +273,7 @@ def get_user_name_from_token():
     result = cursor.fetchone()
     cursor.close()
     conn.close()
-
+    print("result-->", result)
     if not result:
         return jsonify({'message': 'User not found'}), 404
 
@@ -616,8 +622,76 @@ def product_registration():
     companies=cursor.fetchall()
     cursor.execute("SELECT * from user_table where company_name = %s", (company,))
     users = cursor.fetchall()
-    print("Companies in product registration:", users)
     return render_template('product_registration.html', company=company, products=products, companies=companies,users=users)
+
+# @app.route('/add_device', methods=['POST'])
+# def add_admin():
+#     data = request.get_json()
+#     company_name = data.get('company_name')
+#     product_data = data.get('product_data')
+
+#     print("Received data:", data)
+
+#     token = request.cookies.get('token')
+#     if not token:
+#         return redirect('/')  # No token, go to login
+
+#     try:
+#         payload = jwt.decode(token, SECRET_KEY, algorithms=['HS256'])
+#     except (jwt.ExpiredSignatureError, jwt.InvalidTokenError):
+#         return redirect('/')  # Invalid or expired token, go to login
+
+#     email = payload.get('email')
+
+#     conn = connect_db()
+#     cursor = conn.cursor(dictionary=True)
+
+#     try:
+#         # Step 1: Validate admin
+#         cursor.execute(
+#             "SELECT company_name, is_admin FROM user_table WHERE email = %s",
+#             (email,)
+#         )
+#         user = cursor.fetchone()
+        
+#         if not user:
+#             return jsonify({"status": "error", "message": "User not found"}), 404
+
+#         if not user['is_admin']:
+#             return jsonify({"status": "error", "message": "You are not authorized to add devices."}), 403
+
+#         if not company_name or not device_data:
+#             return jsonify({"status": "error", "message": "Missing company name or device data"}), 400
+
+#         # Step 2: Insert all devices
+#         insert_query = """
+#             INSERT INTO device_table (company_name, device_type, device_name, graph_duration)
+#             VALUES (%s, %s, %s, %s)
+#         """
+#         new_device_ids = []
+#         for device in device_data:
+#             device_type = device.get('device_type')
+#             device_name = device.get('device_name')
+
+#             if not device_type or not device_name:
+#                 continue  # Skip invalid data
+
+#             cursor.execute(insert_query, (company_name, device_type, device_name, device_duration))
+#             new_device_ids.append(cursor.lastrowid)
+#             create_panels_for_devices(cursor)
+
+#         # print("radhe radhe", new_device_ids)
+#         conn.commit()
+
+#         return jsonify({"status": "success", "message": "Devices and panels added successfully!"})
+
+#     except mysql.connector.Error as err:
+#         print(f"Database Error: {err}")
+#         return jsonify({"status": "error", "message": "Database error occurred."}), 500
+
+#     finally:
+#         cursor.close()
+#         conn.close()
 
 # @app.route('/add_device', methods=['POST'])
 # def add_admin():
@@ -738,11 +812,20 @@ def add_admin():
 
         # --- Step 2: Insert into product_details ---
         product_insert_query = """
+<<<<<<< Updated upstream
             INSERT INTO product_details (product_type, date_of_purchase, warranty_period, serial_number, user_access)
             VALUES (%s, %s, %s, %s, %s)
         """
 
         for product in product_data:
+=======
+            INSERT INTO product_details (company_name, product_type, date_of_purchase, warranty_period, serial_number, user_access)
+            VALUES (%s, %s, %s, %s, %s, %s)
+        """
+
+        for product in product_data:
+            company_name = company_name  # Use provided or default company name
+>>>>>>> Stashed changes
             product_type = product.get('product_type')
             date_of_purchase = product.get('date_of_purchase')
             warranty_period = product.get('warranty_period')
@@ -759,6 +842,10 @@ def add_admin():
 
                 try:
                     cursor.execute(product_insert_query, (
+<<<<<<< Updated upstream
+=======
+                        company_name,
+>>>>>>> Stashed changes
                         product_type,
                         date_of_purchase,
                         int(warranty_period),
@@ -1313,7 +1400,7 @@ except ConnectionError as e:  # ✅ Use imported ConnectionError
 def wtstempsync():
     result = get_user_name_from_token()
     email = result.get('email')
-    name = result.get('company_name')
+    company_name = result.get('company_name')
 
     print("wtstempsync page", email)
 
@@ -1337,7 +1424,7 @@ def wtstempsync():
 
         return render_template(
             'dashboard23.html',
-            name=name,
+            name=company_name,
             device_data=device_data,
             result=result_data,
             alerts=alerts
@@ -1503,6 +1590,152 @@ def disconnect():
 
 
 # ======================= MicroService For Running Light  START ========================
+# running light graph indivi -->
+@socketio.on('graph_data')
+def graph_data(data):
+    connection = None
+    cursor = None
+    try:
+        # Fetch and validate input data
+        today = datetime.today().strftime('%Y-%m-%d')
+        start_date = data.get('startDate', today)
+        end_date = data.get('endDate', today)
+        timeselect = data.get('timeSelect', 'daily-individual')
+        graphselect = data.get('graphSelect')
+        device_id = data.get('deviceId')
+        selected_day = data.get('selectedWeekday')
+
+        print("Received data for graph_data:", data)
+
+        # Validate date inputs
+        if not start_date or not end_date:
+            start_date = end_date = today
+
+        try:
+            datetime.strptime(start_date, '%Y-%m-%d')
+            datetime.strptime(end_date, '%Y-%m-%d')
+        except ValueError:
+            socketio.emit('graph_data', {'error': 'Invalid date format. Please use YYYY-MM-DD.'},room=request.sid)
+            return
+
+        print(f"Validated Start Date: {start_date}, End Date: {end_date}, Time Selection: {timeselect}, Selected Day: {selected_day}")
+
+        # Connect to the database
+        # connection = Mydatabase.connect_dbs()
+        # cursor = connection.cursor()
+
+        conn = connect_db()
+        cursor = conn.cursor(dictionary=True)
+
+        weekday_filter = ""
+        if selected_day != "all":
+            weekday_filter = f"AND WEEKDAY(DATE(inserttimestamp)) = {selected_day}"
+
+        # Define SQL queries based on the timeframe
+        if timeselect == "daily-individual" or (start_date == end_date and timeselect == "set-date-individual"):
+            query =f"""WITH RECURSIVE hours AS (
+            SELECT 0 AS hour
+            UNION ALL
+            SELECT hour + 1 
+            FROM hours 
+            WHERE hour < 23)
+                    SELECT 
+                h.hour, 
+                CURDATE() AS date,
+                COALESCE(COUNT(CASE WHEN dd.POWER > 0 THEN 1 END), 0) AS active_run_time,
+                COALESCE(ROUND(SUM(dd.POWER) / 60, 2), 0) AS tot_power, 
+                COALESCE(COUNT(*), 0) AS count, 
+                dd.device_id AS device_id,
+                COALESCE(ROUND(48 - (SUM(dd.POWER) / 60), 2), 0) AS power_saving
+            FROM 
+                hours h
+            LEFT JOIN 
+                device_data dd ON HOUR(dd.inserttimestamp) = h.hour
+				  
+									
+                AND DATE(dd.inserttimestamp) BETWEEN %s AND %s
+                AND dd.device_type = 'tube'
+                AND dd.device_id = %s
+            GROUP BY 
+                h.hour, dd.device_id
+            ORDER BY 
+                h.hour;"""
+        elif timeselect == "set-date-individual" and start_date != end_date:
+            query = f"""
+            WITH hourly_data AS (
+                SELECT 
+                    DATE(inserttimestamp) AS date,
+                    HOUR(inserttimestamp) AS hour,  
+                    COUNT(CASE WHEN POWER > 0 THEN 1 END) AS active_run_time,
+                    ROUND(SUM(POWER) / 60, 2) AS tot_power, 
+                    COUNT(*) AS count, 
+                    device_id,
+                    ROUND(48 - (SUM(POWER) / 60), 2) AS power_saving
+                FROM device_data
+                WHERE 
+                    device_type = 'tube'
+                    AND DATE(inserttimestamp) BETWEEN %s AND %s
+                    AND device_id = %s
+                    {weekday_filter}
+                GROUP BY DATE(inserttimestamp), HOUR(inserttimestamp), device_id
+            )
+            SELECT 
+                date, 
+                ROUND(SUM(active_run_time), 2) AS active_run_time, 
+                ROUND(SUM(tot_power), 2) AS power_consumption, 
+                ROUND(SUM(power_saving), 2) AS power_saving,
+                device_id
+            FROM hourly_data
+            GROUP BY date, device_id
+            ORDER BY date ASC
+            """
+        else:
+            socketio.emit('graph_data', {'error': 'Invalid time selection. Please select a valid timeframe.'},room=request.sid)
+            return
+
+        # Execute query and fetch results
+        cursor.execute(query, (start_date, end_date, device_id))
+        results_graph = cursor.fetchall()
+
+        # print("Query Results:", results_graph)
+
+        # Process and structure results
+        if timeselect == "daily-individual" or (start_date == end_date and timeselect == "set-date-individual"):
+            response_data_graph = [{
+                'date': str(row[1]),
+                'hour': int(row[0]),
+                'active_run_time': float(row[2]),
+                'power_consumption': float(row[3]),
+                'power_saving': float(row[6])
+            } for row in results_graph]
+        else:
+            response_data_graph = [{
+                'date': str(row[0]),
+                'active_run_time': float(row[1]),
+                'power_consumption': float(row[2]),
+                'power_saving': float(row[3])
+            } for row in results_graph]
+
+        # Emit structured data back to the client
+        socketio.emit('graph_data', {
+            'data': response_data_graph,
+            'updatedData': data
+        }, room=request.sid)
+
+    except Exception as e:
+        print("Database query failed:", e)
+        socketio.emit('graph_data', {'error': f"An error occurred: {str(e)}"}, room=request.sid)
+    finally:
+        # Ensure proper resource cleanup
+        if cursor:
+            cursor.close()
+	  
+	
+
+
+
+
+
 try:
     micro_client.connect(RUNNING_URL)
     print("Connected to Running service.")
@@ -1513,7 +1746,23 @@ except ConnectionError as e:  # ✅ Use imported ConnectionError
 
 @app.route('/running_light', methods=['GET', 'POST'])
 def running_light():
-    return render_template('running_light.html')
+    result = get_user_name_from_token()
+    email = result.get('email')
+    company_name = result.get('company_name')
+    name = result.get('name')
+
+    # Make request to microservice
+    try:
+        response = requests.get(f'{RUNNING_URL}/running_home', params={'name': name, 'company_name': company_name})
+        print("Response from microservice:", response)
+        
+        return render_template('running_light.html')
+    
+    except requests.exceptions.RequestException as e:
+        print(f"Request to microservice failed: {e}")
+        return jsonify({'message': 'Failed to connect to microservice'}), 500
+
+
 
 # ======================= MicroService For Running Light END ========================
 
@@ -1529,4 +1778,3 @@ if __name__ == '__main__':
     create_tables()
     # app.run(debug=True)
     socketio.run(app, host='0.0.0.0', port=5000, debug=True)
-

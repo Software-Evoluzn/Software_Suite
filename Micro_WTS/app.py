@@ -647,7 +647,7 @@ def get_latest_device_data(user_email):
             
             # Get latest sensor row for this device
             cursor.execute("""
-                 SELECT * FROM temp_data
+                SELECT * FROM temp_data
                 WHERE device_id = %s
                 AND DATE(timestamp) = CURDATE()
                 ORDER BY timestamp DESC
