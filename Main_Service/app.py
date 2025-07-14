@@ -78,7 +78,6 @@ def create_tables():
             is_admin BOOLEAN DEFAULT FALSE,
             inserttimestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
             profile_img VARCHAR(255) DEFAULT NULL,
-            name varchar(255) DEFAULT NULL,
             contact_no VARCHAR(20) DEFAULT NULL,
             unit_name VARCHAR(255) DEFAULT NULL,
             contact_number VARCHAR(20) DEFAULT NULL,
