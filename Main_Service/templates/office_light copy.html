@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Running Lights</title>
+  <link rel="stylesheet" href="../static/css/style.css" />
+  <link rel="stylesheet" href="../static/fontawesome-free-5.15.4-web/fontawesome-free-5.15.4-web/css/all.min.css" />
+  <script src="../static/js/jquery.js"></script>
+  <script src="../static/js/socket.io.js"></script>
+  <link rel="stylesheet" href="../static/css/font.css" />
+  <link href="../static/css/bootstrap.css" rel="stylesheet" />
+  <link href="../static/css/main_dashboard_graph.css" rel="stylesheet" />
+  <script src="../static/js/chart.js"></script>
+  <link rel="stylesheet" href="../static/css/datepicker.css">
+  <script src="../static/js/datepicker.js"></script>
+
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css"
+    integrity="sha512-SnH5WK+bZxgPHs44uWIX+LLJAJ9/2PkPKZ5QiAj6Ta86w+fsb2TkcmfRyVX3pBnMFcV7oQPJkl9QevSCWr3W6A=="
+    crossorigin="anonymous" referrerpolicy="no-referrer" />
+  <link rel="stylesheet" href="../static/css/main_dashboard.css" />
+  <link rel="stylesheet" href="../static/css/navbar_backup.css" />
+  <link rel="stylesheet" href="../static/css/font.css" />
+</head>
+
+<body class="running_light_body">
+
+  {% include 'navbar_backup.html' %}
+  <!-- Main Content Area -->
+  <main class="main-content">
+    <!-- Main content goes here -->
+
+    {% for device_type, device_ids in ids.items() %}
+    {% if device_type == 'tube' and device_ids %}
+    {% for device_id in device_ids %}
+    <div class="dashboard_all_main_div1">
+      <div class="row">
+        <div class="col-lg-3" style="display: flex; justify-content: center; align-items: center;">
+          <div>
+            <div class="running_light_indidual_div">
+              <div class="dashboard_led_title">
+                <!-- Here we use device_id instead of device_ids[0] -->
+                <div class="dashboard_smartLED_title">{{ device_id }} <span style="font-size: 12px;">(48W)</span></div>
+                <div>
+                  <label class="dashboard_main_master_switch">
+                    <input type="checkbox" class="dashboard_main_checkbox1" name="master-switch"
+                      onclick="toggleSwitch('{{ device_id }}/control')" id="{{ device_id }}/control" />
+                    <span class="dashboard_main_slider"></span>
+                  </label>
+                </div>
+              </div>
+              <div class="dashboard_off_on_title">
+                <div class="dashboard_off">OFF</div>
+                <div class="dashboard_on">ON</div>
+              </div>
+              <!-- <div style="text-align: center; font-weight: 600;color:#2b3674 ;">[48 W]</div> -->
+              <div class="dashboard_light_intensity_title">Light Intensity</div>
+
+              <div class="dashboard_online_status_box">
+                <div class="dashboard_online_status" id="tube_{{ device_id }}"></div>
+              </div>
+              <div class="dashboard_smart_led1_range_div">
+                <input class="dashboard_smart_led1_range2 dashboard_range_color2"
+                  id="rangeValueIndividual_{{ device_id }}" type="range" min="0" max="100" value="0" />
+              </div>
+              <div class="dashboard_percent2" id="rangeDisplayIndividual_{{ device_id }}">0%</div>
+
+              <script>
+                document.addEventListener('DOMContentLoaded', function () {
+                  const sliders = document.querySelectorAll('.dashboard_smart_led1_range2');
+                  sliders.forEach(slider => {
+                    const device_id = slider.id.split('-')[0];
+                    const rangeInput = document.getElementById(`rangeValueIndividual_{{device_id }}`);
+                    const rangeDisplay = document.getElementById(`rangeDisplayIndividual_{{device_id}}`);
+
+                    rangeInput.addEventListener('input', () => {
+                      rangeDisplay.textContent = `${rangeInput.value}%`;
+                    });
+                    rangeInput.addEventListener('change', function () {
+                      const topic = `${device_id}/control`;
+                      const value = rangeInput.value;
+
+                      fetch('/update_intensity_Individual', {
+                        method: 'POST',
+                        headers: {
+                          'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({
+                          topic: topic,
+                          ledIntensity: value
+                        })
+                      })
+                        .then(response => {
+                          if (!response.ok) {
+                            throw new Error('Network response was not ok');
+                          }
+                          return response.json();
+                        })
+                        .then(data => {
+                          console.log('Flask API response:', data.message);
+                        })
+                        .catch(error => {
+                          console.error('There was a problem with the fetch operation:', error);
+                        });
+                    });
+                  });
+                });
+              </script>
+
+              <div class="dashboard_power_consumption_value">
+                <div class="dashboard_power_title">Power</div>
+                <div class="dashboard_power_value">
+                  <span class="dashboard_kwh_title" id="tube_powerconsumption_{{device_id}}"></span>
+                </div>
+              </div>
+              <div class="dashboard_consumption_value">
+                <div>Consumption</div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="col-lg-9">
+          <div>
+            <div class="main_power_consumption_graph_div">
+              <div class="mt-4">
+                <div class="timeSelect_graphSelect_css_running_light_graph_indv_1">
+                  <button type='button' onclick="downloadFileRunning(this)" data-device-id="{{device_id}}"
+                    class="download_button"><img src="../static/img/excel_icon.png" alt=""
+                      class="download_image"></button>
+
+                  <select id="timeSelect_running_{{device_id}}" class="timeSelect_css_running_light_graph_indv_1">
+                    <option value="daily-individual">Today</option>
+                    <option value="set-date-individual">Set Date</option>
+                  </select>
+
+                  <select id="graphSelect_running_{{device_id}}" class="timeSelect_css_running_light_graph_indv_1">
+                    <option value="power-consumption">Power Consumption</option>
+                    <option value="power-saving">Power Saving</option>
+                    <option value="active-run-time">Active Run Time</option>
+                  </select>
+
+                </div>
+
+                <div>
+                  <div class="dateRangeContainer_dispalyDate_running_light_graph_indv_1">
+                    <div id="dateRangeContainer_running_{{device_id}}"
+                      class="dateRangeContainer_css_running_light_graph_indv_1" style="display: none;">
+                      <label for="dateRange_running_light_graph_indv_1"
+                        class="dateRange_title_running_light_graph_indv_1">Select Date
+                        Range:</label>
+                      <input id="dateRange_running_{{device_id}}" type="text" placeholder="Select Date Range"
+                        class="timeSelect_css_running_light_graph_indv_1">
+                      <select class="running_graph_lux_weekdays_days"
+                        id="running_light_power_consumption_weekday_dropdown{{device_id}}">
+                        <option value="all">All Days</option>
+                        <option value="6">Sunday</option>
+                        <option value="0">Monday</option>
+                        <option value="1">Tuesday</option>
+                        <option value="2">Wednesday</option>
+                        <option value="3">Thursday</option>
+                        <option value="4">Friday</option>
+                        <option value="5">Saturday</option>
+
+                      </select>
+                      <button id="applyDateRange_running_{{device_id}}"
+                        class="timeSelect_button_css_running_light_graph_indv_1">Apply</button>
+                    </div>
+
+
+                    <div class="DateDisplay_css_running_light_graph_indv_1_div"
+                      id="DateDisplay_css_running_{{ device_id }}">
+                      <div id="startDateDisplay_running_{{ device_id }}"
+                        class="startDateDisplay_css_running_light_graph_indv_1">
+                      </div>
+                      <div id="endDateDisplay_running_{{ device_id }}"
+                        class="endDateDisplay_css_running_light_graph_indv_1">
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div>
+                  <div class="active_run_idle_time_running_light_graph_indv_1">
+                    <h6 class="main_master_switch_title ">Power Savings :<span
+                        id="active_tube_indivisual_{{device_id}}"></span></h6>
+                  </div>
+                </div>
+
+              </div>
+              <div>
+                <div class="main_power_consumption_graph_div">
+                  <div class="main_canvas_wrapper">
+                    <canvas id="myChart_{{device_id}}" class="main_power_consumption_graph_main_div"
+                      data-device-id="{{ device_id }}"></canvas>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    {% endfor %}
+    {% endif %}
+    {% endfor %}
+
+
+    <!-- </div> -->
+
+    <!-- ------------Lux Level Graph Start--------------------- -->
+    <div class="running_light_lux_main_div mt-4">
+      <div class="running_light_lux_main_heading">
+        Lux Level Graph
+      </div>
+
+      <div class="running_graph_lux_main_div mt-4">
+        <div>
+          <div class="running_light_today_set_date_div">
+            <select id="timeframeSelect_running_light_line_graph" class="running_light_start_end_div mr-3">
+              <option value="daily">Today</option>
+              <option value="set-date">Set Date</option>
+            </select>
+            <select id="individualrunning_lightlux" class="running_light_start_end_div mr-3">
+              <option value="">All Lights</option>
+              {% for i in tube_id %}
+              <option value="{{ i[0] }}">{{ i[0] }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div id="dateRangeContainer_running_light_line_graph"
+            class="dateRangeContainer_css_running_light_line_graph mt-2">
+            <label for="dateRange_running_light_line_graph">Select Date Range:</label>
+            <input id="dateRange_running_light_line_graph" type="text" placeholder="Select Date Range"
+              class="running_light_start_end_div">
+            <!-- <select class="running_graph_lux_weekdays_days" id="running_graph_lux_weekdays_set_date_range">
+                    <option value="all">All Days</option>
+                    <option value="6">Sunday</option>
+                    <option value="0">Monday</option>
+                    <option value="1">Tuesday</option>
+                    <option value="2">Wednesday</option>
+                    <option value="3">Thursday</option>
+                    <option value="4">Friday</option>
+                    <option value="5">Saturday</option>
+                   
+                </select> -->
+            <button id="applyDateRange_running_light_line_graph" class="running_light_start_end_div">Apply</button>
+          </div>
+          <!-- <div id="dateRangeContainer_today_running_light_line_graph" >
+              <div class="running_start_end_date_main_div mt-3">
+                <p id="startDateDisplay_running_light_line_graph"></p>
+                <p id="endDateDisplay_running_light_line_graph"></p>
+              </div>
+            </div> -->
+          <div id="dateRangeContainer_today_running_light_line_graph">
+            <div class="running_start_end_date_main_div mt-3">
+              <div id="startDateInput"></div>
+              <span>
+                <div id="endDateInput"></div>
+              </span>
+            </div>
+          </div>
+
+
+          <div class="main_power_consumption_graph_div">
+            <div class="main_canvas_wrapper">
+              <canvas id="myChart_running_light_line_graph" class="main_power_consumption_graph_main_div"></canvas>
+            </div>
+          </div>
+        </div>
+      </div>
+      <!-- ------------Lux Level Graph End--------------------- -->
+  </main>
+
+  <footer class="footer1">
+    <footer class="footer2">
+      Powered by <span class="footerevoluzn">EVOLUZN</span>
+    </footer>
+  </footer>
+  <script src="../static/js/main_dashboard.js"></script>
+  <script src="../static/js/lux_level.js"></script>
+  <script src="../static/js/socket_running.js"></script>
+  <!-- <script src="../static/js/socket1.js"></script> -->
+
+</body>
+
+</html>
