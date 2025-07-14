@@ -94,6 +94,7 @@ function setupSocketConnection(ip) {
     
     // Socket listener for incoming data
     socket.on('office', function (data_office) { 
+        console.log('ithe yet aahe', data_office);
         if (typeof data_office === 'string') {
             const deviceID_office = data_office.split(":");
             console.log('officedeviceID', deviceID_office);

@@ -96,16 +96,27 @@ document.addEventListener('DOMContentLoaded', function () {
         product_data: productData
       })
     })
-      .then(response => response.json())
-      .then(data => {
-        if (data.status === 'success') {
-          alert("Successfully Added!!!");
-          companyNameInput.value = '';
-          deviceInput.value = '';
-          deviceTypeSelect.selectedIndex = 0;
-          addedDeviceDivs.forEach(deviceDiv => deviceDiv.remove());
+      .then(async response => {
+        const contentType = response.headers.get("content-type");
+
+        if (response.status === 401) {
+          alert("Session expired. Please log in again.");
+          window.location.href = '/';
+          return;
+        }
+
+        if (contentType && contentType.includes("application/json")) {
+          const data = await response.json();
+          if (data.status === 'success') {
+            alert("Successfully Added!!!");
+            // Reset fields if needed
+          } else {
+            alert("Error: " + data.message);
+          }
         } else {
-          alert("Error: " + data.message);
+          const text = await response.text();
+          console.error("Unexpected HTML response:", text);
+          alert("Unexpected response. Please try again.");
         }
       })
       .catch(error => {

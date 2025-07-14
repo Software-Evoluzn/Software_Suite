@@ -3,6 +3,8 @@ import mysql.connector
 from werkzeug.security import generate_password_hash, check_password_hash
 import jwt
 import datetime
+import time
+from time import sleep
 import os
 from werkzeug.utils import secure_filename
 import requests
@@ -12,6 +14,14 @@ from socketio.exceptions import ConnectionError
 import paho.mqtt.client as mqtt
 import random
 from flask_cors import CORS
+# from datetime import timezone
+from datetime import datetime, timedelta, timezone
+from collections import defaultdict
+import openpyxl
+from openpyxl import Workbook		
+import tempfile
+from flask import send_file
+
 # from flask_socketio import join_room
 
 app = Flask(__name__)
@@ -22,7 +32,7 @@ socketio = SocketIO(app, cors_allowed_origins="*")
 micro_client = socketio_client.Client()
 
 WTS_URL = 'http://192.168.0.223:5002'
-RUNNING_URL = 'http://192.168.0.224:5003'
+RUNNING_URL = 'http://192.168.0.223:5003'
 OFFICE_URL = 'http://192.168.0.224:5004'
 
 SECRET_KEY = 'evoluzn@123'
@@ -154,9 +164,14 @@ def create_tables():
             product_type VARCHAR(100) NOT NULL,
             date_of_purchase DATE NOT NULL,
             warranty_period INT NOT NULL,  -- assuming this is in months; change if needed
-            serial_number VARCHAR(100) NOT NULL UNIQUE
+            serial_number VARCHAR(100) NOT NULL UNIQUE,
+            user_access VARCHAR(255) NOT NULL  
         );
     """)
+
+
+
+
 
     # ALTER TABLE alert_temp ADD UNIQUE unique_index (device_name, timestamp)
     conn.commit()
@@ -248,7 +263,7 @@ def get_user_name_from_token():
 
     conn = connect_db()
     cursor = conn.cursor()
-    cursor.execute("SELECT Company_name FROM user_table WHERE id = %s", (user_id,))
+    cursor.execute("SELECT Company_name, name FROM user_table WHERE id = %s", (user_id,))
     result = cursor.fetchone()
     cursor.close()
     conn.close()
@@ -259,7 +274,8 @@ def get_user_name_from_token():
     return {
         'user_id': user_id,
         'email': email,
-        'company_name': result[0]
+        'company_name': result[0],
+        'name': result[1]
     }
 
 broker = "203.109.124.70"
@@ -284,6 +300,7 @@ def on_message(client, userdata, message):
     try:
         print("on_message called")
         payload = message.payload.decode()
+        print("Decoded payload:", payload)
         topic = message.topic
         conn = connect_db()
         cursor = conn.cursor()
@@ -398,6 +415,7 @@ def on_message(client, userdata, message):
                 payload_with_topic = payload_str + ":" + topic_without_status
                                                                 
                 if device_type in ["highbay", "plug", "office"] or topic.startswith("tube"):
+                    print("Sending data to emit")
                     socketio.emit(device_type, payload_with_topic)
 
     except Exception as e:
@@ -480,7 +498,7 @@ def login():
             'user_id': user_id,
             'CompanyName': Company_name,
             'email': email,
-            'exp': datetime.datetime.now(datetime.timezone.utc) + datetime.timedelta(days=2)
+            'exp': datetime.now(timezone.utc) + timedelta(days=2)
         }
 
         # Generate JWT token
@@ -601,6 +619,74 @@ def product_registration():
     print("Companies in product registration:", users)
     return render_template('product_registration.html', company=company, products=products, companies=companies,users=users)
 
+# @app.route('/add_device', methods=['POST'])
+# def add_admin():
+#     data = request.get_json()
+#     company_name = data.get('company_name')
+#     product_data = data.get('product_data')
+
+#     print("Received data:", data)
+
+#     token = request.cookies.get('token')
+#     if not token:
+#         return redirect('/')  # No token, go to login
+
+#     try:
+#         payload = jwt.decode(token, SECRET_KEY, algorithms=['HS256'])
+#     except (jwt.ExpiredSignatureError, jwt.InvalidTokenError):
+#         return redirect('/')  # Invalid or expired token, go to login
+
+#     email = payload.get('email')
+
+#     conn = connect_db()
+#     cursor = conn.cursor(dictionary=True)
+
+#     try:
+#         # Step 1: Validate admin
+#         cursor.execute(
+#             "SELECT company_name, is_admin FROM user_table WHERE email = %s",
+#             (email,)
+#         )
+#         user = cursor.fetchone()
+        
+#         if not user:
+#             return jsonify({"status": "error", "message": "User not found"}), 404
+
+#         if not user['is_admin']:
+#             return jsonify({"status": "error", "message": "You are not authorized to add devices."}), 403
+
+#         if not company_name or not device_data:
+#             return jsonify({"status": "error", "message": "Missing company name or device data"}), 400
+
+#         # Step 2: Insert all devices
+#         insert_query = """
+#             INSERT INTO device_table (company_name, device_type, device_name, graph_duration)
+#             VALUES (%s, %s, %s, %s)
+#         """
+#         new_device_ids = []
+#         for device in device_data:
+#             device_type = device.get('device_type')
+#             device_name = device.get('device_name')
+
+#             if not device_type or not device_name:
+#                 continue  # Skip invalid data
+
+#             cursor.execute(insert_query, (company_name, device_type, device_name, device_duration))
+#             new_device_ids.append(cursor.lastrowid)
+#             create_panels_for_devices(cursor)
+
+#         # print("radhe radhe", new_device_ids)
+#         conn.commit()
+
+#         return jsonify({"status": "success", "message": "Devices and panels added successfully!"})
+
+#     except mysql.connector.Error as err:
+#         print(f"Database Error: {err}")
+#         return jsonify({"status": "error", "message": "Database error occurred."}), 500
+
+#     finally:
+#         cursor.close()
+#         conn.close()
 
 @app.route('/add_device', methods=['POST'])
 def add_admin():
@@ -612,12 +698,16 @@ def add_admin():
 
     token = request.cookies.get('token')
     if not token:
+        if request.is_json:
+            return jsonify({"status": "error", "message": "Unauthorized: No token"}), 401
         return redirect('/')  # No token, go to login
 
     try:
         payload = jwt.decode(token, SECRET_KEY, algorithms=['HS256'])
     except (jwt.ExpiredSignatureError, jwt.InvalidTokenError):
-        return redirect('/')  # Invalid or expired token, go to login
+         if request.is_json:
+                return jsonify({"status": "error", "message": "Invalid or expired token"}), 401
+         return redirect('/')  # Invalid or expired token, go to login
 
     email = payload.get('email')
 
@@ -631,37 +721,57 @@ def add_admin():
             (email,)
         )
         user = cursor.fetchone()
-        
+
         if not user:
             return jsonify({"status": "error", "message": "User not found"}), 404
 
         if not user['is_admin']:
             return jsonify({"status": "error", "message": "You are not authorized to add devices."}), 403
 
-        if not company_name or not device_data:
-            return jsonify({"status": "error", "message": "Missing company name or device data"}), 400
+        if not company_name or not product_data:
+            return jsonify({"status": "error", "message": "Missing company name or product data"}), 400
 
-        # Step 2: Insert all devices
-        insert_query = """
-            INSERT INTO device_table (company_name, device_type, device_name, graph_duration)
-            VALUES (%s, %s, %s, %s)
+        # --- Optional: Handle device_data here only if needed ---
+        # If you no longer use deviceData, comment this block or adapt it.
+        # Example placeholder:
+        # device_data = data.get('device_data', [])
+
+        # --- Step 2: Insert into product_details ---
+        product_insert_query = """
+            INSERT INTO product_details (product_type, date_of_purchase, warranty_period, serial_number, user_access)
+            VALUES (%s, %s, %s, %s, %s)
         """
-        new_device_ids = []
-        for device in device_data:
-            device_type = device.get('device_type')
-            device_name = device.get('device_name')
 
-            if not device_type or not device_name:
-                continue  # Skip invalid data
+        for product in product_data:
+            product_type = product.get('product_type')
+            date_of_purchase = product.get('date_of_purchase')
+            warranty_period = product.get('warranty_period')
+            serials = product.get('serials', [])
 
-            cursor.execute(insert_query, (company_name, device_type, device_name, device_duration))
-            new_device_ids.append(cursor.lastrowid)
-            create_panels_for_devices(cursor)
+            for serial in serials:
+                serial_number = serial.get('serial_number')
+                user_access_list = serial.get('user_access', [])
+                user_access_str = ', '.join(user_access_list)
 
-        # print("radhe radhe", new_device_ids)
+                # Validate before inserting
+                if not all([product_type, date_of_purchase, warranty_period, serial_number]):
+                    continue  # Skip if any value missing
+
+                try:
+                    cursor.execute(product_insert_query, (
+                        product_type,
+                        date_of_purchase,
+                        int(warranty_period),
+                        serial_number,
+                        user_access_str
+                    ))
+                except mysql.connector.Error as err:
+                    print(f"Error inserting serial '{serial_number}': {err}")
+                    continue
+
         conn.commit()
 
-        return jsonify({"status": "success", "message": "Devices and panels added successfully!"})
+        return jsonify({"status": "success", "message": "Products registered successfully!"})
 
     except mysql.connector.Error as err:
         print(f"Database Error: {err}")
@@ -670,6 +780,7 @@ def add_admin():
     finally:
         cursor.close()
         conn.close()
+
 
 @app.route('/logout')
 def logout():
@@ -696,8 +807,496 @@ def home():
     result = get_user_name_from_token()
     print("wtstempsync page", result)
     name = result.get('company_name', 'Guest')
-
+    print("Company name:", name)
     return render_template('main_dashboard.html', name=name)
+
+
+# ======================= MicroService For Office Light  START ========================
+try:
+    micro_client.connect(OFFICE_URL)
+    print("Connected to Office service.")
+except ConnectionError as e:  # ✅ Use imported ConnectionError
+    print(f"[WARNING] Could not connect to Office service at {OFFICE_URL}: {e}")
+
+def get_product_list_of_user(name, company_name):
+    conn = connect_db()
+    cursor = conn.cursor()
+
+    # Case-insensitive match for user_access
+    query = """
+        SELECT serial_number 
+        FROM product_details 
+        WHERE company_name = %s 
+        AND LOWER(user_access) LIKE %s
+    """
+    # Add wildcards for partial match (e.g., "mayur deshmukh" in "Mayur Deshmukh, Prajwal Bhoyar")
+    cursor.execute(query, (company_name, f"%{name.lower()}%"))
+
+    rows = cursor.fetchall()
+    conn.close()
+
+    # Extract serial numbers into a list
+    serial_numbers = [row[0] for row in rows]
+    return serial_numbers
+
+def create_xlsx_response(data, headers, filename):
+    """Create and return an XLSX file response."""
+    if data is None or len(data) == 0:
+        return "No data to download.", 404
+
+    workbook = Workbook()
+    sheet = workbook.active
+    sheet.append(headers)
+
+    for row in data:
+        # Create a list of values, filtering out None values
+        values_to_append = [
+            row.get('date'),
+            row.get('hour'),
+            row.get('power_consumption'),
+            row.get('active_run_time'),
+            row.get('power_saving')
+        ]
+
+        # Filter out None values
+        filtered_values = [value for value in values_to_append if value is not None]
+
+        # Append the filtered values to the sheet
+        if filtered_values:  # Ensure there is at least one value to append
+            sheet.append(filtered_values)
+
+    with tempfile.NamedTemporaryFile(delete=False, suffix='.xlsx') as temp_file:
+        workbook.save(temp_file.name)
+        temp_file_name = temp_file.name
+
+    response = send_file(temp_file_name, as_attachment=True, download_name=filename, mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+
+    # Set custom headers for cache control
+    response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
+    response.headers['Pragma'] = 'no-cache'
+    response.headers['Expires'] = '0'
+
+    return response
+
+def get_last_intensity(id):
+    try:
+        conn = connect_db()
+        cursor = conn.cursor()
+        device_id = id.replace("/control", "")
+
+        # Case-insensitive match for user_access
+        query = """
+             SELECT intensity FROM sensor_data 
+                WHERE device_id = %s AND device_status = '1'
+                ORDER BY inserttimestamp DESC 
+                LIMIT 1
+        """
+        
+        cursor.execute(query, (device_id,))
+
+        result = cursor.fetchone()
+        conn.close()
+
+        if result and result[0] is not None:
+            return int(result[0])
+
+    except Exception as e:
+        print(f"❌ DB Error: {e}")
+
+    return 100  # Default fallback intensity
+
+@app.route("/download_xlsx_individual_office_light", methods=['POST'])
+def download_xlsx_individual_office_light():
+    print('Inside function')
+    try:
+        
+        result = get_user_name_from_token()
+        name = result.get('name')
+        company_name = result.get('company_name')
+        
+        data = request.json
+        print('Received data:', data)
+        start_date = data.get('startDate')
+        end_date = data.get('endDate')
+        timeselect = data.get('timeSelect')
+        device_id = data.get('device_id')
+        print(f"start_date: {start_date}, end_date: {end_date}")
+
+        conn = connect_db()
+        cursor = conn.cursor()
+
+        if timeselect in ["daily", "daily-individual"] or (start_date == end_date and timeselect == "set-date-individual"):
+            query = """
+                WITH r AS (
+                    SELECT 
+                        HOUR(inserttimestamp) AS hour, 
+                        DATE(inserttimestamp) AS date,  
+                        COUNT(CASE WHEN POWER > 0 THEN 1 END) AS active_run_time,
+                        ROUND((CASE WHEN COUNT(*) > 0 THEN (SUM(COALESCE(POWER, 0)) / 60) ELSE 0 END), 2) AS tot_power,
+                        COUNT(*) AS count, 
+                        device_id,
+                        ROUND((48 - CASE WHEN COUNT(*) > 0 THEN (SUM(POWER) / 60) ELSE 0 END), 2) AS power_saving
+                    FROM 
+                        sensor_data
+                    WHERE 
+                        device_type = 'office'
+                        AND DATE(inserttimestamp) BETWEEN %s AND %s
+                        AND device_id = %s
+                    GROUP BY 
+                        DATE(inserttimestamp), HOUR(inserttimestamp), device_id
+                )
+                SELECT 
+                    r.date AS date,             
+                    r.hour AS hour, 
+                    ROUND(SUM(r.active_run_time), 2) AS active_run_time, 
+                    ROUND(SUM(r.tot_power), 2) AS power_consumption, 
+                    ROUND(SUM(r.power_saving), 2) AS power_saving
+                FROM 
+                    r
+                GROUP BY 
+                    r.date,                     
+                    r.hour
+                ORDER BY 
+                    r.date,                     
+                    r.hour;                    
+            """
+            cursor.execute(query, (start_date, end_date, device_id))
+        elif timeselect == "set-date-individual" and start_date != end_date:
+            query = """
+                WITH r AS (
+                    SELECT 
+                        DATE(inserttimestamp) AS date,
+                        HOUR(inserttimestamp) AS hour,  
+                        COUNT(CASE WHEN POWER > 0 THEN 1 END) AS active_run_time,
+                        ROUND((CASE WHEN COUNT(*) > 0 THEN (SUM(COALESCE(POWER, 0)) / 60) ELSE 0 END), 2) AS tot_power, 
+                        COUNT(*) AS count, 
+                        device_id,
+                        ROUND((48 - CASE WHEN COUNT(*) > 0 THEN (SUM(POWER) / 60) ELSE 0 END), 2) AS power_saving
+                    FROM 
+                        sensor_data
+                    WHERE 
+                        device_type = 'office'
+                        AND DATE(inserttimestamp) BETWEEN %s AND %s
+                        AND device_id = %s
+                    GROUP BY 
+                        DATE(inserttimestamp), HOUR(inserttimestamp), device_id
+                )
+                SELECT 
+                    r.date AS date, 
+                    ROUND(SUM(r.active_run_time), 2) AS active_run_time, 
+                    ROUND(SUM(r.tot_power), 2) AS power_consumption, 
+                    ROUND(SUM(r.power_saving), 2) AS power_saving
+                FROM 
+                    r
+                GROUP BY 
+                    r.date
+                ORDER BY 
+                    r.date ASC;
+            """
+            cursor.execute(query, (start_date, end_date, device_id))
+
+        results = cursor.fetchall()
+        # print('Query results:', results)
+
+        if timeselect == "daily-individual" or (start_date == end_date and timeselect == "set-date-individual"):
+            data = [{
+                'date': str(row[0]), 
+                'hour': int(row[1]),   
+                'active_run_time': float(row[2]),  
+                'power_consumption': float(row[3]), 
+                'power_saving': float(row[4]),
+            } for row in results]
+        else:
+            data = [{
+                'date': str(row[0]),  
+                'active_run_time': float(row[1]),
+                'power_consumption': float(row[2]),  
+                'power_saving': float(row[3]),
+            } for row in results]
+
+        print("Prepared data for XLSX:", data)    
+
+        headers = (
+            ["Date", "Hour", "Power Consumption", "Active Run Time", "Power Saving"]
+            if start_date == end_date
+            else ["Date", "Power Consumption", "Active Run Time", "Power Saving"]
+        )
+
+        cursor.close()
+        conn.close()
+
+        if not data:
+            return "No data available for Office Light", 404
+
+        return create_xlsx_response(data, headers, "office_light_individual_data.xlsx")
+
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route('/office_light', methods=['GET', 'POST'])
+def office_light():
+    global ids, devices
+    result = get_user_name_from_token()
+    name = result.get('name')
+    company_name = result.get('company_name')
+
+    serial_numbers = get_product_list_of_user(name, company_name)
+    print(f"Serial numbers for {name} in {company_name}: {serial_numbers}")
+
+    conn = connect_db()
+    cursor = conn.cursor()
+
+    cursor.execute("""
+        SELECT DISTINCT device_type, device_id 
+        FROM sensor_data
+        WHERE device_type = 'office'
+    """)
+    rows = cursor.fetchall()
+
+    # try:
+    #     mqttc.publish('tubeGlobal/control', "200")
+    # except Exception as e:
+    #     print(f"Error publishing MQTT message: {e}")
+
+    # Step 2: Build 'ids' dictionary
+    ids = defaultdict(list)
+    serial_numbers = []
+    for device_type, device_id in rows:
+        ids[device_type].append(device_id)
+        serial_numbers.append(device_id)
+        
+    try:
+        for device_id in serial_numbers:
+            print(f"Publishing MQTT message for device_id: {device_id}")
+            mqttc.publish(f'{device_id}/control', "200")
+            # mqttc.publish(f'{device_id}/status', qos=1)
+            # mqttc.publish(f'device_id}/auto_motion_status', qos=1)
+            # mqttc.publish(f'device_id}/auto_brightness_status', qos=1)
+            # mqttc.publish(f'device_id}/intensity', qos=1)
+            # mqttc.publish(f'device_id}/lux', qos=1)
+        # mqttc.publish('officeGlobal/control', "200")
+    except Exception as e:
+        print(f"Error publishing MQTT message: {e}")
+
+    # Step 3: Prepare today's date
+    today = datetime.now(timezone.utc).date()
+
+    # Step 4: Fetch today's sensor_data for given devices
+    if serial_numbers:
+        placeholders = ','.join(['%s'] * len(serial_numbers))  # e.g., %s, %s
+        query = f"""
+            SELECT inserttimestamp, device_id, temperature 
+            FROM sensor_data 
+            WHERE DATE(inserttimestamp) = %s 
+            AND device_type = 'office'
+            AND device_id IN ({placeholders})
+            ORDER BY inserttimestamp
+        """
+        cursor.execute(query, [today] + serial_numbers)
+        rows = cursor.fetchall()
+    else:
+        rows = []
+
+    # Step 5: Format as structured_data list of dicts
+    structured_data = [
+        {
+            "timestamp": row[0].strftime("%Y-%m-%d %H:%M"),
+            "device_id": row[1],
+            "temperature": row[2]
+        }
+        for row in rows
+    ]
+
+    # print("Structured data:", structured_data)
+    # print("Device IDs:", serial_numbers)
+    # print("IDs dictionary:", structured_data)
+
+    # Step 6: Return to template
+    return render_template(
+        'office_light.html',
+        structured_data=structured_data,
+        device_ids=serial_numbers,
+        ids=ids
+    )
+
+# office light graph indivi -->
+@socketio.on('graph_data')
+def graph_data(data):
+    conn = None
+    cursor = None
+    try:
+        # Fetch and validate input data
+        today = datetime.today().strftime('%Y-%m-%d')
+        start_date = data.get('startDate', today)
+        end_date = data.get('endDate', today)
+        timeselect = data.get('timeSelect', 'daily-individual')
+        graphselect = data.get('graphSelect')
+        device_id = data.get('deviceId')
+        selected_day = data.get('selectedWeekday')
+
+        print("Received data for graph_data:", data)
+
+        # Validate date inputs
+        if not start_date or not end_date:
+            start_date = end_date = today
+
+        try:
+            datetime.strptime(start_date, '%Y-%m-%d')
+            datetime.strptime(end_date, '%Y-%m-%d')
+        except ValueError:
+            socketio.emit('graph_data', {'error': 'Invalid date format. Please use YYYY-MM-DD.'},room=request.sid)
+            return
+
+        print(f"Validated Start Date: {start_date}, End Date: {end_date}, Time Selection: {timeselect}, Selected Day: {selected_day}")
+
+        # Connect to the database
+        conn = connect_db()
+        cursor = conn.cursor()
+
+        weekday_filter = ""
+        if selected_day != "all":
+            weekday_filter = f"AND WEEKDAY(DATE(inserttimestamp)) = {selected_day}"
+
+        # Define SQL queries based on the timeframe
+        if timeselect == "daily-individual" or (start_date == end_date and timeselect == "set-date-individual"):
+            query =f"""WITH RECURSIVE hours AS (
+            SELECT 0 AS hour
+            UNION ALL
+            SELECT hour + 1 
+            FROM hours 
+            WHERE hour < 23)
+                    SELECT 
+                h.hour, 
+                CURDATE() AS date,
+                COALESCE(COUNT(CASE WHEN dd.POWER > 0 THEN 1 END), 0) AS active_run_time,
+                COALESCE(ROUND(SUM(dd.POWER) / 60, 2), 0) AS tot_power, 
+                COALESCE(COUNT(*), 0) AS count, 
+                dd.device_id AS device_id,
+                COALESCE(ROUND(48 - (SUM(dd.POWER) / 60), 2), 0) AS power_saving
+            FROM 
+                hours h
+            LEFT JOIN 
+                sensor_data dd ON HOUR(dd.inserttimestamp) = h.hour
+				  
+									
+                AND DATE(dd.inserttimestamp) BETWEEN %s AND %s
+                AND dd.device_type = 'office'
+                AND dd.device_id = %s
+            GROUP BY 
+                h.hour, dd.device_id
+            ORDER BY 
+                h.hour;"""
+        elif timeselect == "set-date-individual" and start_date != end_date:
+            query = f"""
+            WITH hourly_data AS (
+                SELECT 
+                    DATE(inserttimestamp) AS date,
+                    HOUR(inserttimestamp) AS hour,  
+                    COUNT(CASE WHEN POWER > 0 THEN 1 END) AS active_run_time,
+                    ROUND(SUM(POWER) / 60, 2) AS tot_power, 
+                    COUNT(*) AS count, 
+                    device_id,
+                    ROUND(48 - (SUM(POWER) / 60), 2) AS power_saving
+                FROM sensor_data
+                WHERE 
+                    device_type = 'office'
+                    AND DATE(inserttimestamp) BETWEEN %s AND %s
+                    AND device_id = %s
+                    {weekday_filter}
+                GROUP BY DATE(inserttimestamp), HOUR(inserttimestamp), device_id
+            )
+            SELECT 
+                date, 
+                ROUND(SUM(active_run_time), 2) AS active_run_time, 
+                ROUND(SUM(tot_power), 2) AS power_consumption, 
+                ROUND(SUM(power_saving), 2) AS power_saving,
+                device_id
+            FROM hourly_data
+            GROUP BY date, device_id
+            ORDER BY date ASC
+            """
+        else:
+            socketio.emit('graph_data', {'error': 'Invalid time selection. Please select a valid timeframe.'},room=request.sid)
+            return
+
+        # Execute query and fetch results
+        cursor.execute(query, (start_date, end_date, device_id))
+        results_graph = cursor.fetchall()
+
+        # print("Query Results:", results_graph)
+
+        # Process and structure results
+        if timeselect == "daily-individual" or (start_date == end_date and timeselect == "set-date-individual"):
+            response_data_graph = [{
+                'date': str(row[1]),
+                'hour': int(row[0]),
+                'active_run_time': float(row[2]),
+                'power_consumption': float(row[3]),
+                'power_saving': float(row[6])
+            } for row in results_graph]
+        else:
+            response_data_graph = [{
+                'date': str(row[0]),
+                'active_run_time': float(row[1]),
+                'power_consumption': float(row[2]),
+                'power_saving': float(row[3])
+            } for row in results_graph]
+
+        # print("Response Data Graph:", response_data_graph)
+
+        # Emit structured data back to the client
+        socketio.emit('graph_data', {
+            'data': response_data_graph,
+            'updatedData': data
+        }, room=request.sid)
+
+    except Exception as e:
+        print("Database query failed:", e)
+        socketio.emit('graph_data', {'error': f"An error occurred: {str(e)}"}, room=request.sid)
+    finally:
+        # Ensure proper resource cleanup
+        if cursor:
+            cursor.close()
+
+# turnon....
+@app.route('/turnMaster', methods=['POST'])
+def turnMaster():
+    print("Here is coming -->")
+    data = request.json
+    id = data.get('id')
+    action = data.get('action')
+    intensity = get_last_intensity(id)
+    print("Turning -->", intensity)
+
+    if action == 'turnonMaster':
+        mqttc.publish(id, f"autoBrightness:0:{intensity}")
+        mqttc.publish(id, "200")
+        return jsonify({'message': f'Switch {id} to {intensity} turned on successfully'})
+    elif action == 'turnoffMaster':
+        mqttc.publish(id, "autoBrightness:0:0") 
+        mqttc.publish(id, "200")
+        return jsonify({'message': f'Switch {id} turned off successfully'})
+    return jsonify({'message': 'Invalid action'})
+
+# for api 6 six individual....device
+@app.route('/intensity_office_individual', methods=['POST'])
+def intensity_office_individual():
+    try:
+        data = request.get_json()
+        print("Received data for intensity update:", data)
+        topic = data.get('topic')
+        led_intensity = data.get('ledIntensity')
+        print(f"Updating intensity for topic: {topic}, intensity: {led_intensity}")
+        payload = f"autoBrightness:0:{led_intensity}"
+        mqttc.publish(topic, payload)
+        mqttc.publish(topic, "200")
+        return jsonify({'success': True, 'message': 'Intensity updated successfully'})
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)})
+
+
+# ======================= MicroService For Office Light END ========================
 
 
 # ======================= WTS Microservice Integration START =======================
@@ -713,7 +1312,6 @@ except ConnectionError as e:  # ✅ Use imported ConnectionError
 @app.route('/wtstempsync')
 def wtstempsync():
     result = get_user_name_from_token()
-    user_id = result.get('user_id')
     email = result.get('email')
     name = result.get('company_name')
 
@@ -787,7 +1385,6 @@ def update_panel():
 def temperature(device_id):
 
     result = get_user_name_from_token()
-    user_id = result.get('user_id')
     email = result.get('email')
     company_name = result.get('company_name')
 
@@ -903,6 +1500,8 @@ def disconnect():
 
 # ======================= WTS Microservice Integration END =======================
 
+
+
 # ======================= MicroService For Running Light  START ========================
 try:
     micro_client.connect(RUNNING_URL)
@@ -917,21 +1516,6 @@ def running_light():
     return render_template('running_light.html')
 
 # ======================= MicroService For Running Light END ========================
-
-# ======================= MicroService For Office Light  START ========================
-try:
-    micro_client.connect(OFFICE_URL)
-    print("Connected to Office service.")
-except ConnectionError as e:  # ✅ Use imported ConnectionError
-    print(f"[WARNING] Could not connect to Office service at {OFFICE_URL}: {e}")
-
-
-
-@app.route('/office_light', methods=['GET', 'POST'])
-def office_light():
-    return render_template('office_light.html')
-
-# ======================= MicroService For Office Light END ========================
 
 
 # Route to handle favicon.ico requests and return a 404 response
