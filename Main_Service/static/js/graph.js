@@ -84,12 +84,24 @@ fetch('static/js/ip.json')
                     const minValueElement = document.querySelector(`.dashboard_temp_min_value_div[data-device="${deviceName}"][data-sensor="${sensorName}"]`);
                     const maxValueElement = document.querySelector(`.dashboard_temp_max_value_div[data-device="${deviceName}"][data-sensor="${sensorName}"]`);
 
-                    // Set the MIN and MAX values (fallback to 'N/A' if undefined)
+                    // // Set the MIN and MAX values (fallback to 'N/A' if undefined)
+                    // if (minValueElement) {
+                    //     minValueElement.textContent = `${sensorData.MIN || '-'}°C`;
+                    // }
+                    // if (maxValueElement) {
+                    //     maxValueElement.textContent = `${sensorData.MAX || '-'}°C`;
+                    // }
+
+                    // Get MIN and MAX values and apply 0 if negative
+                    const minValue = (typeof sensorData.MIN === 'number') ? Math.max(0, sensorData.MIN) : '-';
+                    const maxValue = (typeof sensorData.MAX === 'number') ? Math.max(0, sensorData.MAX) : '-';
+
+                    // Set the MIN and MAX values (fallback to '-' if undefined)
                     if (minValueElement) {
-                        minValueElement.textContent = `${sensorData.MIN || '-'}°C`;
+                        minValueElement.textContent = `${minValue}°C`;
                     }
                     if (maxValueElement) {
-                        maxValueElement.textContent = `${sensorData.MAX || '-'}°C`;
+                        maxValueElement.textContent = `${maxValue}°C`;
                     }
                 }
             }

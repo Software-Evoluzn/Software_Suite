@@ -87,14 +87,14 @@ def create_tables():
     alert_temp_query =("""
         CREATE TABLE IF NOT EXISTS alert_temp (
             id INT AUTO_INCREMENT PRIMARY KEY,
-			device_name VARCHAR(255) NOT NULL,
+			serial_number VARCHAR(255) NOT NULL,
 			message TEXT NOT NULL,
 			timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
 			mail_sent_flag TINYINT(1) DEFAULT 0,
             exceeded_phases varchar(255)
         )
     """)
-    # ALTER TABLE alert_temp ADD UNIQUE unique_index (device_name, timestamp)
+    # ALTER TABLE alert_temp ADD UNIQUE unique_index (serial_number, timestamp)
     conn.commit()
 
     try:
@@ -158,11 +158,11 @@ def on_message(client, userdata, msg):
             parts = payload_str.split(":", 2)  # limit to 3 parts max
             print(f"?? Received payloadthreshold: {payload_str}")
             if len(parts) == 3:
-                _, device_name, message = parts
-                print('device_name:::::', device_name, 'message::::', message)
+                _, serial_number, message = parts
+                print('serial_number:::::', serial_number, 'message::::', message)
 
-                insert_alert(device_name, message)
-                print(f"? Inserted alert from {device_name}: {message}")
+                insert_alert(serial_number, message)
+                print(f"? Inserted alert from {serial_number}: {message}")
             else:
                 print(f"? Unexpected payload format: {payload_str}")
             return
@@ -236,23 +236,23 @@ def on_message(client, userdata, msg):
     except Exception as e:
         print(f"? Error processing message: {e}")
 
-def insert_alert(device_name, message):
-    print("Inserting or updating alert...", device_name, message)
+def insert_alert(serial_number, message):
+    print("Inserting or updating alert...", serial_number, message)
     conn = connect_db()
     cursor = conn.cursor()
 
     try:
         check_query = """
-            SELECT id ,device_name,exceeded_phases FROM alert_temp
-            WHERE device_name = %s AND message = %s
+            SELECT id ,serial_number,exceeded_phases FROM alert_temp
+            WHERE serial_number = %s AND message = %s
         """
-        cursor.execute(check_query, (device_name, message))
+        cursor.execute(check_query, (serial_number, message))
         existing = cursor.fetchone()
         print('dsdsdsdsdsdsds',existing)
 
         current_time = datetime.datetime.now()
 
-        actual_device_id = device_name.replace("WTSAlert", "WTS")
+        actual_device_id = serial_number.replace("WTSAlert", "WTS")
 
         # Get latest sensor data
         cursor.execute("""
@@ -298,24 +298,24 @@ def insert_alert(device_name, message):
             """
             cursor.execute(update_query, (current_time, phases_str,existing[0]))
             conn.commit()
-            print(f"🔄 Alert existed. Timestamp updated for {device_name}.")
+            print(f"🔄 Alert existed. Timestamp updated for {serial_number}.")
         else:
             # Insert new alert
             insert_query = """
-                INSERT INTO alert_temp (device_name, message, timestamp, exceeded_phases)
+                INSERT INTO alert_temp (serial_number, message, timestamp, exceeded_phases)
                 VALUES (%s, %s, %s, %s)
             """
-            values = (device_name, message, current_time, phases_str)
+            values = (serial_number, message, current_time, phases_str)
             cursor.execute(insert_query, values)
             conn.commit()
             print("✅ New alert inserted.")
 
         # Send email if this is a new alert
         if not existing:
-            send_email_and_update_flag(device_name, message, exceeded_phases)
+            send_email_and_update_flag(serial_number, message, exceeded_phases)
 
         alert_data = {
-            'device_name': device_name,
+            'serial_number': serial_number,
             'message': message,
             'exceeded_phases': phases_str,
             'timestamp': current_time.strftime('%Y-%m-%d %H:%M:%S')
@@ -330,8 +330,8 @@ def insert_alert(device_name, message):
         conn.close()
 
 
-# def insert_alert(device_name, message):
-#     print("Inserting or updating alert...", device_name, message)
+# def insert_alert(serial_number, message):
+#     print("Inserting or updating alert...", serial_number, message)
 #     conn = None
 #     cursor = None
 
@@ -340,16 +340,16 @@ def insert_alert(device_name, message):
 #         cursor = conn.cursor()
 
 #         check_query = """
-#             SELECT id, device_name, exceeded_phases FROM alert_temp
-#             WHERE device_name = %s AND message = %s
+#             SELECT id, serial_number, exceeded_phases FROM alert_temp
+#             WHERE serial_number = %s AND message = %s
 #         """
-#         cursor.execute(check_query, (device_name, message))
+#         cursor.execute(check_query, (serial_number, message))
 #         existing = cursor.fetchone()
 #         print('Existing alert:', existing)
 
 #         current_time = datetime.datetime.now()
 
-#         actual_device_id = device_name.replace("WTSAlert", "WTS")
+#         actual_device_id = serial_number.replace("WTSAlert", "WTS")
 
 #         cursor.execute("""
 #             SELECT R1, Y1, B1, R2, Y2, B2, R3, Y3, B3, N, timestamp 
@@ -392,21 +392,21 @@ def insert_alert(device_name, message):
 #             """
 #             cursor.execute(update_query, (current_time, phases_str, existing[0]))
 #             conn.commit()
-#             print(f"🔄 Alert existed. Timestamp updated for {device_name}.")
+#             print(f"🔄 Alert existed. Timestamp updated for {serial_number}.")
 #         else:
 #             insert_query = """
-#                 INSERT INTO alert_temp (device_name, message, timestamp, exceeded_phases)
+#                 INSERT INTO alert_temp (serial_number, message, timestamp, exceeded_phases)
 #                 VALUES (%s, %s, %s, %s)
 #             """
-#             cursor.execute(insert_query, (device_name, message, current_time, phases_str))
+#             cursor.execute(insert_query, (serial_number, message, current_time, phases_str))
 #             conn.commit()
 #             print("✅ New alert inserted.")
 
 #             # Send email only on new alert
-#             send_email_and_update_flag(device_name, message, exceeded_phases)
+#             send_email_and_update_flag(serial_number, message, exceeded_phases)
 
 #         alert_data = {
-#             'device_name': device_name,
+#             'serial_number': serial_number,
 #             'message': message,
 #             'exceeded_phases': phases_str,
 #             'timestamp': current_time.strftime('%Y-%m-%d %H:%M:%S')
@@ -439,7 +439,7 @@ def send_email_and_update_flag(alert_device_id, user_threshold, exceeded_phases)
 
             # Render email body
             html_body = render_template("alert.html",
-                                        device_name=actual_device_id,
+                                        serial_number=actual_device_id,
                                         R=None, Y=None, B=None, N=None,  # optionally provide actual values
                                         threshold=user_threshold,
                                         exceeded_phases=', '.join(exceeded_phases))
@@ -467,7 +467,7 @@ def send_email_and_update_flag(alert_device_id, user_threshold, exceeded_phases)
                 UPDATE alert_temp 
                 SET mail_sent_flag = 1,
                     exceeded_phases = %s
-                WHERE device_name = %s 
+                WHERE serial_number = %s 
                 AND message = %s 
                 AND mail_sent_flag = 0
             """, (', '.join(exceeded_phases), alert_device_id, user_threshold))
@@ -513,23 +513,43 @@ def alert_show(user_email):
         conn = connect_db()
         cursor = conn.cursor(dictionary=True)
 
-        # Match device_name logic using RIGHT() and string functions
+       
+
+        # Match serial_number logic using RIGHT() and string functions
+        # cursor.execute("""
+        #     SELECT 
+        #         at.serial_number, 
+        #         at.message, 
+        #         at.exceeded_phases, 
+        #         MAX(at.timestamp) AS timestamp
+        #         FROM alert_temp at
+        #         JOIN product_details dt 
+        #         ON RIGHT(at.serial_number, LENGTH(dt.serial_number) - 3) = RIGHT(dt.serial_number, LENGTH(dt.serial_number) - 3)
+        #         WHERE dt.company_name = (
+        #         SELECT company_name 
+        #         FROM user_table 
+        #         WHERE email = %s
+        #     )
+        #     GROUP BY at.serial_number, at.message, at.exceeded_phases
+        # """, (user_email,))
+
+
         cursor.execute("""
-            SELECT 
-                at.device_name, 
-                at.message, 
-                at.exceeded_phases, 
-                MAX(at.timestamp) AS timestamp
-                FROM alert_temp at
-                JOIN device_table dt 
-                ON RIGHT(at.device_name, LENGTH(dt.device_name) - 3) = RIGHT(dt.device_name, LENGTH(dt.device_name) - 3)
-                WHERE dt.company_name = (
-                SELECT company_name 
-                FROM user_table 
-                WHERE email = %s
-            )
-            GROUP BY at.device_name, at.message, at.exceeded_phases
-        """, (user_email,))
+                        SELECT  
+                        at.serial_number,  
+                        at.message,  
+                        at.exceeded_phases,  
+                        MAX(at.timestamp) AS timestamp  
+                    FROM alert_temp at  
+                    JOIN product_details dt  
+                        ON RIGHT(at.serial_number, LENGTH(dt.serial_number) - 3) = RIGHT(dt.serial_number, LENGTH(dt.serial_number) - 3)  
+                    JOIN user_table ut  
+                        ON dt.user_access = ut.email  
+                    WHERE ut.email = %s 
+                    GROUP BY at.serial_number, at.message, at.exceeded_phases;
+                """, (user_email,))
+
+
 
         alerts = cursor.fetchall()
         print("Filtered alerts:", alerts)
@@ -554,21 +574,32 @@ def get_latest_device_data(user_email):
 
     try:
         # Step 1: Get company name from user
-        cursor.execute("SELECT company_name FROM user_table WHERE email = %s", (user_email,))
+        cursor.execute("SELECT company_name, name FROM user_table WHERE email = %s", (user_email,))
         user = cursor.fetchone()
         if not user:
             return jsonify({'error': 'User not found'}), 404
 
         company_name = user['company_name']
-        print("Company Name:", company_name)
+        username = user['name']
+        print("Company Name:", company_name, username)
 
         # Step 2: Get all active devices for that company
         cursor.execute("""
-            SELECT id AS device_id, device_name, graph_duration
-            FROM device_table
-            WHERE company_name = %s AND is_active = 1 AND device_type = 'Temperature Sensor'
-        """, (company_name,))
+            SELECT id AS device_id, serial_number, graph_duration
+            FROM product_details
+            WHERE LOWER(user_access) LIKE %s AND product_type = 'Wiretempsync'
+        """, (username,))
         devices = cursor.fetchall()
+
+
+        # cursor.execute("""
+        #     SELECT id AS device_id, serial_number, graph_duration
+        #     FROM product_details
+        #     WHERE LOWER(user_access) LIKE %s AND product_type = 'Wiretempsync'
+        # """, (f"%{username.lower()}%",))  # Tuple with single string
+
+        # devices = cursor.fetchall()
+
 
         print("the devices data is -->", devices)
 
@@ -577,13 +608,15 @@ def get_latest_device_data(user_email):
         result = {}
 
         for device in devices:
-            device_name = device['device_name']
-            graph_duration_data[device_name] = device['graph_duration']
+            serial_number = device['serial_number']
+            graph_duration_data[serial_number] = device['graph_duration']
             cursor.execute("""
                 SELECT panel_name, phase
                 FROM panel
                 WHERE device_id = %s
-            """, (device_name,))
+            """, (serial_number,))
+
+            print("serial_number-->", serial_number)
             
             panel_rows = cursor.fetchall()
             
@@ -591,7 +624,7 @@ def get_latest_device_data(user_email):
             for row in panel_rows:
                 panels[row['panel_name']].add(row['phase'])
             
-            panel_structure[device_name] = dict(panels)
+            panel_structure[serial_number] = dict(panels)
 
              # Fetch the min and max values for the current device's sensor data for the current day
             cursor.execute("""
@@ -609,7 +642,7 @@ def get_latest_device_data(user_email):
                     MIN(N) AS minN, MAX(N) AS maxN
                 FROM temp_data
                 WHERE device_id = %s AND DATE(timestamp) = CURDATE()
-            """, (device_name,))
+            """, (serial_number,))
 
             min_max_row = cursor.fetchone()
 
@@ -631,12 +664,14 @@ def get_latest_device_data(user_email):
                         "MIN": min_value,
                         "MAX": max_value
                     }
+
+            print("sensor-0->",result)
             
-        for device_name, panels in panel_structure.items():
+        for serial_number, panels in panel_structure.items():
 
             default_data = {
                 'id': None,
-                'device_id': device_name,
+                'device_id': serial_number,
                 'R1': None, 'Y1': None, 'B1': None,
                 'R2': None, 'Y2': None, 'B2': None,
                 'R3': None, 'Y3': None, 'B3': None,
@@ -652,7 +687,7 @@ def get_latest_device_data(user_email):
                 AND DATE(timestamp) = CURDATE()
                 ORDER BY timestamp DESC
                 LIMIT 1
-            """, (device_name,))
+            """, (serial_number,))
             sensor_row = cursor.fetchone()
 
             print("sensor data is query", sensor_row)
@@ -662,7 +697,7 @@ def get_latest_device_data(user_email):
             if not sensor_row:
                 continue  # No sensor data
 
-            final_data[device_name] = {}
+            final_data[serial_number] = {}
 
             for panel_name, phases in panels.items():
                 phase_data = {}
@@ -671,7 +706,9 @@ def get_latest_device_data(user_email):
                     if phase in sensor_row:
                         phase_data[phase] = sensor_row[phase]
 
-                final_data[device_name][panel_name] = phase_data
+                final_data[serial_number][panel_name] = phase_data
+
+        print("result--<", result)
  
         print("graph-->", graph_duration_data)
 
@@ -685,6 +722,8 @@ def get_latest_device_data(user_email):
     finally:
         cursor.close()
         conn.close()
+
+
 
 
 @socketio.on('connect')
@@ -718,9 +757,9 @@ def send_live_data(user_email, room):
         time.sleep(60)
 
 
-def filter_device_data(device_Name, data):
-    if device_Name in data:
-        filtered_data = {device_Name: data[device_Name]}
+def filter_device_data(serial_number, data):
+    if serial_number in data:
+        filtered_data = {serial_number: data[serial_number]}
         print(f"Filtered data: {filtered_data}")
         return filtered_data
     else:
@@ -782,10 +821,20 @@ def dashboard():
         devices=devices
     )
 
+# def safe_value(value):
+#     if isinstance(value, (datetime.datetime, datetime.date)):
+#         return value.isoformat()
+#     elif value is None:
+#         return ""
+#     return value
+
+
 @app.route('/wts_home', methods=['POST', 'GET'])
 def home():
 
     user_email = request.args.get('email')
+
+    print("Userr Name ",user_email)
     
     conn = connect_db()
     cursor = conn.cursor(dictionary=True)
@@ -794,12 +843,18 @@ def home():
         
         filtered_devices = []
         received_data = get_latest_device_data(user_email)
+
+        print("recived data",received_data)
+
     
         alerts = alert_show(user_email)
 
         print("Received data for home page:", type(alerts)) 
 
-        # return render_template('dashboard23.html', devices=filtered_devices, device_data=received_data[0], result=received_data[1], alerts=alerts)
+        print("recived data2",received_data[1])
+
+        print("Alert-->, success", received_data[0])
+
         return jsonify({
             'status': 'success',
             'devices': filtered_devices,
@@ -807,6 +862,15 @@ def home():
             'result': received_data[1],
             'alerts': alerts
         })
+
+        # return jsonify({
+        #     'status': 'success',
+        #     'devices': filtered_devices,
+        #     'device_data': [safe_value(v) for v in received_data[0]],
+        #     'result': [safe_value(v) for v in received_data[1]],
+        #     'alerts': [{k: safe_value(v) for k, v in alert.items()} for alert in alerts]
+        # })
+
 
     except mysql.connector.Error as err:
         print(f"Error fetching data: {err}")
@@ -818,16 +882,15 @@ def home():
     
 @app.route('/update_panel', methods=['POST'])
 def update_panel():
-    print("update panel page")
+    
     if request.method=='POST':
         data = request.get_json()
-        device_name = data['device_name']
+        serial_number = data['device_name']
         panel_name = data['panel_name']
         old_panel_value = data['old_panel_value']
-
+        
         conn = connect_db()
         cursor = conn.cursor()  
-
         try:
             # SQL query to update the panel name
             update_query = """
@@ -836,7 +899,9 @@ def update_panel():
                 WHERE panel_name = %s
                 AND device_id = %s;
             """
-            cursor.execute(update_query, (panel_name, old_panel_value, device_name))
+            cursor.execute(update_query, (panel_name, old_panel_value, serial_number))
+            
+            print("update panel page")
 
             # Commit the changes
             conn.commit()
@@ -925,10 +990,10 @@ def graph_page():
 
         # Step 5: Fetch alert data using transformed ID
         cursor.execute("""
-            SELECT device_name, message, exceeded_phases, MAX(timestamp) AS timestamp
+            SELECT serial_number, message, exceeded_phases, MAX(timestamp) AS timestamp
             FROM alert_temp
-            WHERE device_name = %s
-            GROUP BY device_name, message, exceeded_phases
+            WHERE serial_number = %s
+            GROUP BY serial_number, message, exceeded_phases
         """, (alert_device_id,))
         alertsindivisual = cursor.fetchall()
 

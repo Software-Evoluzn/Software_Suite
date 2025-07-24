@@ -252,7 +252,7 @@
 
     <!--running lights and machine oee stats -->
 
-    {% if 'Running Light' in device_types %}    
+        
     <div class="p-3 row running_lights_master_switch_main">
       <div class="main_running_main p-3 col">
         <div class="row mt-2">
@@ -397,11 +397,11 @@
       </div>
       <!-- *************sarang lohe*************** -->
     </div>
-    {% endif %}
+    
     <!--running lights and machine oee stats -->
 
 
-    {% if 'Office Light' in device_types %}
+    
     <div class="p-3 row main_office_light_main">
       <div class="main_running_main p-3 col">
         <div class="row mt-2">
@@ -541,12 +541,12 @@
       </div>
       <!-- ********************************************************* -->
     </div>
-      {% endif %}
+   
 
 
 
     <!-- **********hi bay lights start************ -->
-   {% if 'Highbay Light' in device_types %}
+   
     <div class="p-3 running_lights_master_switch_main row">
       <div class="highbay_lights_main p-3 col">
         <div class="row mt-2">
@@ -670,12 +670,11 @@
         </div>
       </div>
     </div>
-     {% endif %}
+ 
     <!-- *******oee stats******* -->
-    
     <div class="row mt-3 p-3 main_oee_daily_parent_div">
       <!-- ******************sarang lohe*************** -->
-      {% if 'OEE stats' in device_type %}
+     
       <div class="col-lg main_power_consumption_graph_div">
         <div class=" mt-4">
           <div class="">
@@ -748,7 +747,6 @@
           </div>
         </div>
       </div>
-        {% endif %}
 
       <!-- ******************sarang lohe*************** -->
       <div class="col-lg main_power_consumption_graph_div">
@@ -801,7 +799,7 @@
                 id="DateDisplay_css_all_device_power_consumption_graph_div">
                 <div id="startDateDisplay_all_device_power_consumption_graph"
                   class="startDateDisplay_css_all_device_power_consumption_graph">
-
+                  
                   <!-- Start Date -->
                 </div>
                 <div id="endDateDisplay_all_device_power_consumption_graph"
@@ -833,12 +831,13 @@
       </div>
 
     </div>
-    
+
+
     <!-- **********AC graph start************** -->
     <div class="row mt-3 p-3 main_ac_daily_parent_div">
 
-      <!-- **********threephase start*****************3Phase Energy Meter************* -->
-      {% if '3Phase Energy Meter' in device_types %}
+      <!-- **********threephase start****************************** -->
+
       <div class="col-lg main_power_consumption_graph_div mr-3">
         <div class="row mt-4">
           <h7 class="main_running_title px-3">THREE PHASE METER POWER CONSUMPTION</h7>
@@ -911,7 +910,7 @@
         </div>
 
       </div>
-       {% endif %}
+
       <!-- **********threephase end****************************** -->
 
 
@@ -989,7 +988,7 @@
       </div>
      
     </div>
-    {% if 'Plug' in device_types %}
+
     <div class="row p-3 mt-3 main_ac_parent_div">
    
       <div class="col main_ac_child_div">
@@ -1011,7 +1010,7 @@
       <!-- AIR CONDITIONER end -->
 
       <!-- SMART SMOKE DETECTOR start -->
-     {% if 'Smoke Detector' in device_types %}
+     
       <div class="col main_ac_child_div">
         <h7 class="mt-4 main_highbay_box_title">SMART SMOKE</h7>
         <h7 class="main_highbay_box_title">DETECTOR</h7>
@@ -1021,7 +1020,7 @@
         </div>
         <div class="main_s_s_value">{{ device_ids | length }}/1</div>
       </div>
-     {% endif %}
+     
       <!-- SMART SMOKE DETECTOR end -->
 
       <!-- TOTAL POWER CONSUMPTION start -->
@@ -1137,8 +1136,6 @@
 
 
   </div>
- {% endif %}
-
   </div>
   <!-- **********AC graph end************** -->
 

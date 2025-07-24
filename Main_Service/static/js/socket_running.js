@@ -1,5 +1,5 @@
 document.addEventListener('DOMContentLoaded', function () {
-    const socket = io('http://192.168.1.18:5000');
+    const socket = io('http://192.168.0.168:5000');
     const deviceIds = Array.from(document.querySelectorAll('[data-device-id]')).map(el => el.dataset.deviceId);
     console.log("deviceIdsdeviceIdsdeviceIds", deviceIds)
 
