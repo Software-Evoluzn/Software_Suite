@@ -31,7 +31,7 @@ socketio = SocketIO(app, cors_allowed_origins="*")
 # === SOCKET.IO CLIENT TO MICRO SERVICE ===
 micro_client = socketio_client.Client()
 
-WTS_URL = 'http://192.168.0.223:5002'
+WTS_URL = 'http://192.168.0.168:5002'
 RUNNING_URL = 'http://192.168.0.223:5003'
 OFFICE_URL = 'http://192.168.0.224:5004'
 
@@ -164,13 +164,12 @@ def create_tables():
             date_of_purchase DATE NOT NULL,
             warranty_period INT NOT NULL,  -- assuming this is in months; change if needed
             serial_number VARCHAR(100) NOT NULL UNIQUE,
-            user_access VARCHAR(255) NOT NULL  
+            user_access VARCHAR(255) NOT NULL  ,
+            graph_duration INT DEFAULT 60,
+            inserttimestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                             
         );
     """)
-
-
-
-
 
     # ALTER TABLE alert_temp ADD UNIQUE unique_index (device_name, timestamp)
     conn.commit()
@@ -291,8 +290,6 @@ def on_disconnect(client, userdata, rc):
     if rc != 0:
         print("Disconnected from MQTT broker. Trying to reconnect...")
         mqttc.reconnect()
-
-
 
 def on_message(client, userdata, message):
     print(f"Received message on topic {message.topic}: {message.payload}")
@@ -420,7 +417,6 @@ def on_message(client, userdata, message):
     except Exception as e:
         e
         print(f"Error: {e}")
-
 
 mqttc.on_connect = on_connect
 mqttc.on_message = on_message
@@ -764,6 +760,12 @@ def add_admin():
                         serial_number,
                         user_access_str
                     ))
+                    # print("product----->" ,product_type)
+                  
+                    if product_type == "Wiretempsync":
+                        print("product----->" ,product_type)
+                        create_panels_for_devices(cursor)
+
                 except mysql.connector.Error as err:
                     print(f"Error inserting serial '{serial_number}': {err}")
                     continue
