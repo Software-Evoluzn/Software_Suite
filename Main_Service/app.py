@@ -31,9 +31,9 @@ socketio = SocketIO(app, cors_allowed_origins="*")
 # === SOCKET.IO CLIENT TO MICRO SERVICE ===
 micro_client = socketio_client.Client()
 
-WTS_URL = 'http://192.168.0.168:5002'
-RUNNING_URL = 'http://192.168.0.223:5003'
-OFFICE_URL = 'http://192.168.0.224:5004'
+WTS_URL = 'http://192.168.1.45:5002'
+RUNNING_URL = 'http://192.168.1.19:5003'
+OFFICE_URL = 'http://192.168.1.19:5004'
 
 SECRET_KEY = 'evoluzn@123'
 
@@ -54,19 +54,6 @@ def create_tables():
     conn = connect_db()
     cursor = conn.cursor()
 
-    # SQL queries to create tables if they don't exist
-    # create_user_table_query = """
-    #     CREATE TABLE IF NOT EXISTS user_table (
-    #         id INT AUTO_INCREMENT PRIMARY KEY,
-    #         company_name VARCHAR(255),
-    #         email VARCHAR(100) UNIQUE,
-    #         password VARCHAR(255),
-    #         is_active BOOLEAN DEFAULT TRUE,
-    #         is_admin BOOLEAN DEFAULT FALSE,
-    #         inserttimestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
-    #         profile_img varchar(255) DEFAULT NULL
-    #     );
-    # """
     create_user_table_query = """
         CREATE TABLE IF NOT EXISTS user_table (
             id INT AUTO_INCREMENT PRIMARY KEY,
@@ -160,6 +147,7 @@ def create_tables():
     product_details_query = ("""
         CREATE TABLE product_details (
             id INT AUTO_INCREMENT PRIMARY KEY,
+            company_name VARCHAR(255) NOT NULL,
             product_type VARCHAR(100) NOT NULL,
             date_of_purchase DATE NOT NULL,
             warranty_period INT NOT NULL,  -- assuming this is in months; change if needed
@@ -261,7 +249,7 @@ def get_user_name_from_token():
 
     conn = connect_db()
     cursor = conn.cursor()
-    cursor.execute("SELECT Company_name, name FROM user_table WHERE id = %s", (user_id,))
+    cursor.execute("SELECT Company_name, name, is_admin FROM user_table WHERE id = %s", (user_id,))
     result = cursor.fetchone()
     cursor.close()
     conn.close()
@@ -273,7 +261,7 @@ def get_user_name_from_token():
         'user_id': user_id,
         'email': email,
         'company_name': result[0],
-        'name': result[1]
+        'admin': result[2]
     }
 
 broker = "203.109.124.70"
@@ -480,19 +468,21 @@ def login():
 
     conn = connect_db()
     cursor = conn.cursor()
-    cursor.execute("SELECT id, Company_name, password FROM user_table WHERE email = %s", (email,))
+    cursor.execute("SELECT id, Company_name, password, is_admin FROM user_table WHERE email = %s", (email,))
     result = cursor.fetchone()
     conn.close()
 
     if result and check_password_hash(result[2], password):
         user_id = result[0]
         Company_name = result[1]
+        is_admin = result[3]
         
         # Create payload with expiry
         payload = {
             'user_id': user_id,
             'CompanyName': Company_name,
             'email': email,
+            'is_admin': is_admin,
             'exp': datetime.now(timezone.utc) + timedelta(days=2)
         }
 
@@ -501,7 +491,11 @@ def login():
 
         # Optionally, you can redirect to a dashboard or return a success message
 
-        resp = make_response(jsonify({'status': 'success', 'email': email}))
+        resp = make_response(jsonify({
+            'status': 'success',
+            'email': email,
+            'is_admin': is_admin
+        }))
 
         resp.set_cookie('token', token, max_age=2*24*60*60)  # 2 days in seconds
         return resp
@@ -614,75 +608,6 @@ def product_registration():
     print("Companies in product registration:", users)
     return render_template('product_registration.html', company=company, products=products, companies=companies,users=users)
 
-# @app.route('/add_device', methods=['POST'])
-# def add_admin():
-#     data = request.get_json()
-#     company_name = data.get('company_name')
-#     product_data = data.get('product_data')
-
-#     print("Received data:", data)
-
-#     token = request.cookies.get('token')
-#     if not token:
-#         return redirect('/')  # No token, go to login
-
-#     try:
-#         payload = jwt.decode(token, SECRET_KEY, algorithms=['HS256'])
-#     except (jwt.ExpiredSignatureError, jwt.InvalidTokenError):
-#         return redirect('/')  # Invalid or expired token, go to login
-
-#     email = payload.get('email')
-
-#     conn = connect_db()
-#     cursor = conn.cursor(dictionary=True)
-
-#     try:
-#         # Step 1: Validate admin
-#         cursor.execute(
-#             "SELECT company_name, is_admin FROM user_table WHERE email = %s",
-#             (email,)
-#         )
-#         user = cursor.fetchone()
-        
-#         if not user:
-#             return jsonify({"status": "error", "message": "User not found"}), 404
-
-#         if not user['is_admin']:
-#             return jsonify({"status": "error", "message": "You are not authorized to add devices."}), 403
-
-#         if not company_name or not device_data:
-#             return jsonify({"status": "error", "message": "Missing company name or device data"}), 400
-
-#         # Step 2: Insert all devices
-#         insert_query = """
-#             INSERT INTO device_table (company_name, device_type, device_name, graph_duration)
-#             VALUES (%s, %s, %s, %s)
-#         """
-#         new_device_ids = []
-#         for device in device_data:
-#             device_type = device.get('device_type')
-#             device_name = device.get('device_name')
-
-#             if not device_type or not device_name:
-#                 continue  # Skip invalid data
-
-#             cursor.execute(insert_query, (company_name, device_type, device_name, device_duration))
-#             new_device_ids.append(cursor.lastrowid)
-#             create_panels_for_devices(cursor)
-
-#         # print("radhe radhe", new_device_ids)
-#         conn.commit()
-
-#         return jsonify({"status": "success", "message": "Devices and panels added successfully!"})
-
-#     except mysql.connector.Error as err:
-#         print(f"Database Error: {err}")
-#         return jsonify({"status": "error", "message": "Database error occurred."}), 500
-
-#     finally:
-#         cursor.close()
-#         conn.close()
-
 @app.route('/add_device', methods=['POST'])
 def add_admin():
     data = request.get_json()
@@ -733,8 +658,8 @@ def add_admin():
 
         # --- Step 2: Insert into product_details ---
         product_insert_query = """
-            INSERT INTO product_details (product_type, date_of_purchase, warranty_period, serial_number, user_access)
-            VALUES (%s, %s, %s, %s, %s)
+            INSERT INTO product_details (company_name, product_type, date_of_purchase, warranty_period, serial_number, user_access)
+            VALUES (%s, %s, %s, %s, %s, %s)
         """
 
         for product in product_data:
@@ -754,6 +679,7 @@ def add_admin():
 
                 try:
                     cursor.execute(product_insert_query, (
+                        company_name,
                         product_type,
                         date_of_purchase,
                         int(warranty_period),
@@ -782,7 +708,6 @@ def add_admin():
         cursor.close()
         conn.close()
 
-
 @app.route('/logout')
 def logout():
     token = request.cookies.get('token')
@@ -802,7 +727,6 @@ def logout():
 
     return resp
 
-
 @app.route('/home')
 def home():
     result = get_user_name_from_token()
@@ -810,6 +734,101 @@ def home():
     name = result.get('company_name', 'Guest')
     print("Company name:", name)
     return render_template('main_dashboard.html', name=name)
+
+def process_devices_for_merging(devices):
+    
+    # Count how many devices per company
+    company_counts = defaultdict(int)
+    for d in devices:
+        company_counts[d['company_name']] += 1
+
+    seen = set()
+
+    for d in devices:
+        cname = d['company_name']
+
+        # Determine if this row should show company column
+        if cname not in seen:
+            d['show_company'] = True
+            d['rowspan'] = company_counts[cname]
+            seen.add(cname)
+        else:
+            d['show_company'] = False
+            d['rowspan'] = 0
+
+        # ***** Warranty Calculations *****
+        dop = d['date_of_purchase']     # datetime.date
+        warranty_months = d['warranty_period']
+
+        # Warranty expiry date
+        expiry_date = dop + timedelta(days=warranty_months * 30)
+
+        # How many days left
+        today = datetime.now().date()
+        remaining_days = (expiry_date - today).days
+
+        d['warranty_expiry'] = expiry_date.strftime("%Y-%m-%d")
+        d['warranty_days_left'] = max(0, remaining_days)  # no negative values
+
+    return devices
+
+@app.route('/product_dashboard', methods=['GET', 'POST'])
+def product_dashboard():
+    token = request.cookies.get('token')
+    if not token:
+        return redirect('/login')
+
+    try:
+        data = jwt.decode(token, SECRET_KEY, algorithms=['HS256'])
+        token_company = data.get('CompanyName')
+        email_company = data.get('email')
+        is_admin = data.get('is_admin', 0)
+    except jwt.ExpiredSignatureError:
+        return redirect('/login')
+    except jwt.InvalidTokenError:
+        return redirect('/login')
+
+    # 2️⃣ Get company from query param if exists
+    company_param = request.args.get('company')
+
+    if company_param:
+        if is_admin == 1:
+            company = company_param
+        elif company_param == token_company:
+            company = company_param
+        else:
+            return "Unauthorized access to product dashboard", 403
+    else:
+        company = token_company
+
+    print("Company name in product dashboard:", company)
+    conn = connect_db()
+    cursor = conn.cursor(dictionary=True)
+
+    try:
+        # Get user info
+        cursor.execute("SELECT * FROM product_details WHERE company_name = %s", (company,))
+        devices = cursor.fetchall()
+
+    except mysql.connector.Error as err:
+        print(f"Error fetching data: {err}")
+        company = "Error"
+        devices = []
+
+    finally:
+        cursor.close()
+        conn.close()
+
+    # Process merging info
+    devices_list = process_devices_for_merging(devices)
+
+    return render_template(
+        'profile.html',
+        company_name=company,
+        devices=devices_list,
+        email_company=email_company,
+        is_admin=is_admin
+    )
 
 
 # ======================= MicroService For Office Light  START ========================
@@ -1042,6 +1061,8 @@ def office_light():
     name = result.get('name')
     company_name = result.get('company_name')
 
+
+    # print("result-->", result)
     serial_numbers = get_product_list_of_user(name, company_name)
     print(f"Serial numbers for {name} in {company_name}: {serial_numbers}")
 
@@ -1517,7 +1538,6 @@ def running_light():
     return render_template('running_light.html')
 
 # ======================= MicroService For Running Light END ========================
-
 
 # Route to handle favicon.ico requests and return a 404 response
 @app.route('/favicon.ico')

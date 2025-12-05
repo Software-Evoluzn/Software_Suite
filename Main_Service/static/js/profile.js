@@ -1,10 +1,35 @@
 document.addEventListener('DOMContentLoaded', function () {
+    const searchInput = document.getElementById("searchInput");
+    const tableRows = document.querySelectorAll("tbody tr");
+
+    function filterTable() {
+        const searchValue = searchInput.value.toLowerCase();
+
+        tableRows.forEach(row => {
+            const rowText = row.textContent.toLowerCase();
+
+            const matchesSearch = rowText.includes(searchValue);
+
+            if (matchesSearch) {
+                row.style.display = "";
+            } else {
+                row.style.display = "none";
+            }
+        });
+    }
+
+    searchInput.addEventListener("keyup", filterTable);
+
+
     const deleteIcons = document.querySelectorAll('.delete_img');
-    const fileInput = document.getElementById('fileUpload');
-    
-    fileInput.addEventListener('change', function () {
-        if (fileInput.files.length > 0) {
-            document.getElementById('uploadForm').submit();
+    document.getElementById("profileImg").addEventListener("click", function () {
+        document.getElementById("fileUpload").click();
+    });
+
+    // Optional: preview selected image
+    document.getElementById("fileUpload").addEventListener("change", function (event) {
+        if (event.target.files && event.target.files[0]) {
+            document.getElementById("profileImg").src = URL.createObjectURL(event.target.files[0]);
         }
     });
 
@@ -35,3 +60,4 @@ document.addEventListener('DOMContentLoaded', function () {
     });
 
 });
+

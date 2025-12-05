@@ -1,5 +1,5 @@
 document.addEventListener('DOMContentLoaded', function () {
-    const socket = io('http://192.168.100.194:5007');
+    const socket = io('http://192.168.0.225:5002');
 
     // Global dictionary to track each SlaveId's status
     let deviceStatus = {};

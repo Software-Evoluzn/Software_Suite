@@ -29,8 +29,8 @@ topic = "WTS4ChannelF0BF2D/control"
 topic = "WTS4ChannelF0BF2D/control"
 
 app = Flask(__name__) 
-socketio = SocketIO(app, cors_allowed_origins="http://evoluzn.org:5002",  manage_session=False)
-# socketio = SocketIO(app, cors_allowed_origins="*",  manage_session=False)
+# socketio = SocketIO(app, cors_allowed_origins="http://evoluzn.org:5002",  manage_session=False)
+socketio = SocketIO(app, cors_allowed_origins="*",  manage_session=False)
 
 app.secret_key = "Evoluzn@999"
 
@@ -851,6 +851,10 @@ def home():
 
         print("Received data for home page:", type(alerts)) 
 
+        # ❗ FIX: Remove None keys before jsonify
+        device_data = {k: v for k, v in received_data[0].items() if k is not None}
+        result_data = {k: v for k, v in received_data[1].items() if k is not None}
+
         print("recived data2",received_data[1])
 
         print("Alert-->, success", received_data[0])
@@ -858,8 +862,8 @@ def home():
         return jsonify({
             'status': 'success',
             'devices': filtered_devices,
-            'device_data': received_data[0],
-            'result': received_data[1],
+            'device_data': device_data,
+            'result': result_data,
             'alerts': alerts
         })
 

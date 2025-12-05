@@ -1,4 +1,4 @@
-    const socket = io("http://192.168.100.194:5007");
+    const socket = io("http://192.168.0.225:5000");
     socket.on('connect', () => {
     console.log('Connected to server');
 });
