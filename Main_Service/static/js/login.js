@@ -48,7 +48,12 @@ document.getElementById("loginForm").addEventListener("submit", function (event)
             if (data.status === 'success') {
                 alert("Login Successful!");
                 localStorage.setItem('email', data.email);
-                window.location.href = '/home';
+
+                if (data.is_admin === 1) {
+                    window.location.href = '/admin_dashboard';
+                } else {
+                    window.location.href = '/home';
+                }
             } else {
                 alert("Error: " + data.message);
             }

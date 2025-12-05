@@ -4,64 +4,49 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Document</title>
+    <title>Company Profile</title>
     <link href="../static/css/bootstrap.css" rel="stylesheet" />
     <link href="../static/css/profile.css" rel="stylesheet" />
-    <script src="../static/js/profile.js"></script>
 </head>
 
+<body class="profile_body_bg">
 
-<body>
+    <!-- Back Button -->
     <div class="p-3">
         <div class="d-flex justify-content-between align-items-center">
             <div>
-                <a href="{{ url_for('home') }}"><button class="lux_graph_level_go_back_button">
+                <a href="{{ request.referrer or url_for('home') }}"><button class="lux_graph_level_go_back_button">
                         <img src="../static/img/left_arrow.svg"> Go Back</button></a>
             </div>
             <div>
             </div>
         </div>
-
     </div>
 
+    <!-- PROFILE -->
     <div class="d-flex justify-content-center">
         <div>
-            <h3 class="text-center p-3 profile_my_profile_title">MY PROFILE</h3>
+            <h3 class="text-center p-3 profile_my_profile_title">PROFILE</h3>
             <div class="mt-5 px-2 profile_profile_img_info_main_div">
                 <div>
-                    <div class="profile_profile_img_div">
-                        <!-- <img class="profile_profile_main_img" src="../static/img/sensor.png"> -->
-                        <img class="profile_profile_main_img" src="{{ url_for('static', filename=profile_img) if profile_img else url_for('static', filename='img/sensor.png') }}">
-                    </div>
                     <form id="uploadForm" action="/upload_profile_img" method="POST" enctype="multipart/form-data">
-                        <div class="profile_smal_camera_icon_update_img">
-                            <label for="fileUpload" class="profile_img_label">
-                                <img src="../static/img/logout.svg" alt="Upload">
-                            </label>
-                            <input type="file" id="fileUpload" name="profile_image" class="profile_file_input" />
+                        <div class="profile_profile_img_div">
+                            <img class="profile_profile_main_img" id="profileImg"
+                                src="{{ url_for('static', filename=profile_img) if profile_img else url_for('static', filename='img/evzlooogo.png') }}">
                         </div>
+
+                        <input type="file" id="fileUpload" name="profile_image" class="profile_file_input"
+                            style="display:none;" />
                     </form>
-                    
                 </div>
 
                 <div class="d-flex align-items-center">
                     <div>
-                        <div class="profile_name_title">
-                            {{ company_name }}
-                        </div>
-                        <div class="mt-4 d-flex flex-row gap-2">
-                            <img src="../static/img/mail.svg">
-                            <div>{{ email }}</div>
-                        </div>
-                        {% if is_admin %}
-                        <div class="admin-link-container">
-                            <a href="{{ url_for('admin_page') }}" class="btn-add-device">
-                                <span class="btn-text">Add Devices</span>
-                            </a>
-                        </div>
+                        <div class="profile_name_title">{{ company_name }}</div>
+                        {% if is_admin == False %}
+                        <div>{{ email_company }}</div>
                         {% endif %}
-
-
+                        <div class="profile_registered_count">{{ devices|length }} products registered</div>
                     </div>
                 </div>
 
@@ -69,49 +54,103 @@
         </div>
     </div>
 
+    <!-- Search -->
+    <div class="profile_search_container">
+        <input type="text" id="searchInput" placeholder="Search products..." class="profile_search_input">
+    </div>
 
+    <!-- TABLE -->
     <div class="device_table_container">
-        <table class="device_table">
+        <table class="profile_table" id="table_format">
             <thead>
                 <tr>
-                    {% if is_admin %}
-                    <th>Company Name</th>
-                    {% endif %}
-                    <th>Device Type</th>
-                    <th>Device Name</th>
-                    <th>Timestamp</th>
-                    {% if is_admin %}
-                    <th>Action</th>
+                    <th>Product Type</th>
+                    <th>Serial Number</th>
+                    <th>Purchase Date</th>
+                    <th>Warranty (Months)</th>
+                    <th>Warranty Expiry</th>
+                    <th>Days Left</th>
+                    <th>User Access</th>
+                    {% if is_admin == True %}
+                    <th>Actions</th>
                     {% endif %}
                 </tr>
             </thead>
-            <tbody>
-                {% for device in devices %}
-                <tr>
-                    {% if is_admin %}
-                    {% if device.show_company %}
-                    <td rowspan="{{ device.rowspan }}">{{ device.company_name }}</td>
-                    {% endif %}
-                    {% endif %}
-                    <td>{{ device.device_type }}</td>
-                    <td>{{ device.device_name }}</td>
-                    <td>{{ device.timestamp }}</td>
 
-                    {% if is_admin %}
-                    <td class="delete-action">
-                        <img src="../static/img/bin.png" alt="Delete" class="delete_img"
-                            data-name="{{ device.device_name }}">
+            <tbody>
+                {% for d in devices %}
+                <tr>
+
+                    <td><a href="#" class="profile_link_blue">{{ d.product_type }}</a></td>
+                    <td class="text-primary">{{ d.serial_number }}</td>
+                    <td>{{ d.date_of_purchase }}</td>
+                    <td>{{ d.warranty_period }}</td>
+                    <td class="text-primary">{{ d.warranty_expiry }}</td>
+
+                    <td>
+                        {% if d.warranty_days_left > 0 %}
+                        <span class="badge_days positive_badge">{{ d.warranty_days_left }} days</span>
+                        {% else %}
+                        <span class="badge_days negative_badge">{{ d.warranty_days_left }} days</span>
+                        {% endif %}
+                    </td>
+
+                    <td class="profile_user">{{ d.user_access }}</td>
+
+                    {% if is_admin == True %}
+                    <td>
+                        <img src="../static/img/bin.png" alt="bin" class="delete_img" data-name="{{ d.serial_number }}">
                     </td>
                     {% endif %}
                 </tr>
                 {% endfor %}
             </tbody>
         </table>
+
+        <!-- mobile view -->
+        <div class="mobile_device_list">
+            {% for d in devices %}
+            <div class="device_card_new">
+
+                <div class="d_header">
+                    <p class="title">{{ d.product_type }}</p>
+                    <span class="days_badge">{{ d.warranty_days_left }} days</span>
+                </div>
+
+                <p class="serial">{{ d.serial_number }}</p>
+
+                <div class="info_row">
+                    <img src="calendar_icon.png" class="icon">
+                    <span>Start: {{ d.date_of_purchase }}</span>
+                </div>
+
+                <div class="info_row">
+                    <img src="clock_icon.png" class="icon">
+                    <span>End: {{ d.warranty_expiry }}</span>
+                </div>
+
+                <div class="info_row">
+                    <img src="user_icon.png" class="icon">
+                    <span>Assigned: {{ d.user_access }}</span>
+                </div>
+
+                <hr>
+
+                <div class="qty_row">
+                    {% if is_admin == True %}
+                    <p class="delete_img_box">
+                        <img src="../static/img/bin.png" alt="bin" class="delete_img" data-name="{{ d.serial_number }}">
+                    </p>
+                    {% endif %}
+                </div>
+
+            </div>
+            {% endfor %}
+        </div>
+
+
     </div>
-
-
-
-    <!-- <footer></footer> -->
+    <script src="../static/js/profile.js"></script>
 </body>
 
 </html>
