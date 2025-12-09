@@ -31,7 +31,7 @@ socketio = SocketIO(app, cors_allowed_origins="*")
 # === SOCKET.IO CLIENT TO MICRO SERVICE ===
 micro_client = socketio_client.Client()
 
-WTS_URL = 'http://192.168.1.45:5002'
+WTS_URL = 'http://192.168.1.25:5002'
 RUNNING_URL = 'http://192.168.1.19:5003'
 OFFICE_URL = 'http://192.168.1.19:5004'
 
@@ -235,7 +235,7 @@ def get_user_name_from_token():
     token = request.cookies.get('token')
 
     if not token:
-        return redirect('/')
+        return None
 
     try:
         payload = jwt.decode(token, SECRET_KEY, algorithms=['HS256'])
@@ -243,6 +243,7 @@ def get_user_name_from_token():
         return redirect('/')
 
     user_id = payload.get('user_id')
+    print("user_id from token:", user_id)
     email = payload.get('email')
     if not user_id:
         return jsonify({'message': 'Invalid token payload'}), 400
@@ -261,6 +262,7 @@ def get_user_name_from_token():
         'user_id': user_id,
         'email': email,
         'company_name': result[0],
+        'username': result[1],
         'admin': result[2]
     }
 
@@ -727,13 +729,82 @@ def logout():
 
     return resp
 
+
+def get_products_for_company(company_name, username):
+    username = username.lower()
+
+    conn = connect_db()
+    cursor = conn.cursor(dictionary=True)
+
+    query = """
+        SELECT product_type, user_access, serial_number
+        FROM product_details 
+        WHERE company_name = %s
+    """
+    cursor.execute(query, (company_name,))
+    rows = cursor.fetchall()
+
+    allowed_product_types = []
+
+    for row in rows:
+        access = row.get("user_access", "")
+
+        if not access:
+            continue
+
+        # Normalize
+        access_list = [u.strip().lower() for u in access.split(",")]
+
+        # Check if user has permission
+        if username in access_list:
+            allowed_product_types.append(row["product_type"])
+
+    cursor.close()
+    conn.close()
+
+    return allowed_product_types
+
+@app.context_processor
+def inject_user_products():
+    default = {'products': [], 'company_name': 'Guest', 'username': None}
+    token_info = get_user_name_from_token()
+    if not token_info:
+        return default
+
+    company_name = token_info.get('company_name', 'Guest')
+    username = token_info.get('username')
+    if not username:
+        return default
+
+    product_rows = get_products_for_company(company_name, username)
+    product_types = [p['product_type'] for p in product_rows]
+
+    return {
+        'products': product_types,
+        'company_name': company_name,
+        'username': username
+    }
+
+
+
+# @app.route('/home')
+# def home():
+#     result = get_user_name_from_token()
+#     print("wtstempsync page", result)
+#     name = result.get('company_name', 'Guest')
+#     print("Company name:", name)
+#     return render_template('main_dashboard.html', name=name)
+
 @app.route('/home')
 def home():
     result = get_user_name_from_token()
     print("wtstempsync page", result)
-    name = result.get('company_name', 'Guest')
-    print("Company name:", name)
-    return render_template('main_dashboard.html', name=name)
+
+    company_name = result.get('company_name', 'Guest')
+    username = result['username']
+
+    return render_template('main_dashboard.html', name=company_name)
+
 
 def process_devices_for_merging(devices):
     

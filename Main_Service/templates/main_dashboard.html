@@ -236,12 +236,12 @@
 <body>
 
   <div id="sidebar-placeholder">
-  {% include 'navbar_backup.html' %}
-   </div>
+    {% include 'navbar_backup.html' %}
+  </div>
   <!-- MAIN CONTAINER -->
 
   <div class="main_content">
-  <p>Welcome, {{ name }}!</p>
+    <p>Welcome, {{ name }}!</p>
     <h4 class="main_main_heading">Main Dashboard</h4>
     <div class="main_alert_main_div">
       <div class="main_alert_main_div1" id="alerts-container">
@@ -252,7 +252,6 @@
 
     <!--running lights and machine oee stats -->
 
-        
     <div class="p-3 row running_lights_master_switch_main">
       <div class="main_running_main p-3 col">
         <div class="row mt-2">
@@ -270,20 +269,18 @@
                   Master-Switch <br />(ON/OFF)
                 </h6>
                 <label class="toggle">
-                  <input type="checkbox" onclick="toggleCheckboxRunning('')"
-                    id="">
+                  <input type="checkbox" onclick="toggleCheckboxRunning('')" id="">
                   <span class="toggle_span"></span>
                 </label>
-              
+
               </div>
               <div class="col">
                 <h6 class="main_master_switch_title">
                   Auto Brightness <br />(ON/OFF)
                 </h6>
-               
+
                 <label class="toggle">
-                  <input type="checkbox" onclick="AutobrightnessRunning('')"
-                    id="">
+                  <input type="checkbox" onclick="AutobrightnessRunning('')" id="">
                   <span class="toggle_span"></span>
                 </label>
               </div>
@@ -300,18 +297,13 @@
           <div class="col">
             <h6 class="main_master_switch_title">Control Lux</h6>
             <div>
-              <input class="w-75 main_luxrange_running_light" id="" type="number"
-                placeholder="Enter a number (0-1500)" oninput="RunningSendLuxValue(this)"
-								  
-														   
-														 
-                onkeydown="RunningSendLuxValue(event, this)" />
+              <input class="w-75 main_luxrange_running_light" id="" type="number" placeholder="Enter a number (0-1500)"
+                oninput="RunningSendLuxValue(this)" onkeydown="RunningSendLuxValue(event, this)" />
               <div id="alertMessage_running_light_control_lux" style="color: #eb2020;"></div>
             </div>
 
             <div class="main_running_value_div text-center w-75">
-              <span class="main_running_light_lux_value" id="rangeDisplayTube"></span><span
-                class="ml-1">lux</span>
+              <span class="main_running_light_lux_value" id="rangeDisplayTube"></span><span class="ml-1">lux</span>
             </div>
           </div>
           <div class="col">
@@ -397,11 +389,11 @@
       </div>
       <!-- *************sarang lohe*************** -->
     </div>
-    
+
     <!--running lights and machine oee stats -->
 
 
-    
+
     <div class="p-3 row main_office_light_main">
       <div class="main_running_main p-3 col">
         <div class="row mt-2">
@@ -415,8 +407,7 @@
               <div class="col">
                 <h6 class="main_master_switch_title">Master-Switch (ON/OFF)</h6>
                 <label class="toggle">
-                  <input type="checkbox" onclick="toggleCheckboxOffice('')"
-                    id="">
+                  <input type="checkbox" onclick="toggleCheckboxOffice('')" id="">
                   <span class="toggle_span"></span>
                 </label>
               </div>
@@ -425,8 +416,7 @@
                   Auto Brightness <br />(ON/OFF)
                 </h6>
                 <label class="toggle">
-                  <input type="checkbox" onclick="toggleCheckboxBrightnessOffice('')"
-                    id="">
+                  <input type="checkbox" onclick="toggleCheckboxBrightnessOffice('')" id="">
                   <span class="toggle_span"></span>
                 </label>
               </div>
@@ -444,18 +434,14 @@
           <div class="col">
             <h6 class="main_master_switch_title">Control All Intensity</h6>
             <div>
-              <input class="w-75 main_luxrange_office_light" id="" type="number"
-                placeholder="Enter a number (0-100)" oninput="officeSendLuxValue(this)"
-								  
-														  
-														
-                onkeydown="OfficehandleEnterKey(event, this)" />
+              <input class="w-75 main_luxrange_office_light" id="" type="number" placeholder="Enter a number (0-100)"
+                oninput="officeSendLuxValue(this)" onkeydown="OfficehandleEnterKey(event, this)" />
               <div id="alertMessage_office_light_control_intensity" style="color: #eb2020;"></div>
             </div>
 
             <div class="main_office_light_lux_value_div text-center w-75">
               <span class="main_office_light_lux_value" id="rangeDisplayOffice">0</span><span class="ml-1">%</span>
-									 
+
             </div>
           </div>
           <div class="col">
@@ -541,18 +527,18 @@
       </div>
       <!-- ********************************************************* -->
     </div>
-   
+
 
 
 
     <!-- **********hi bay lights start************ -->
-   
+
     <div class="p-3 running_lights_master_switch_main row">
       <div class="highbay_lights_main p-3 col">
         <div class="row mt-2">
           <h7 class="col main_running_title">HI-BAY LIGHTS<span style="font-size: 15px;">(100W)</span></h7>
           <div class="pr-3">
-          
+
           </div>
         </div>
 
@@ -562,8 +548,7 @@
               <div class="col">
                 <h6 class="main_master_switch_title">Master-Switch (ON/OFF)</h6>
                 <label class="toggle">
-                  <input type="checkbox" onclick="toggleCheckboxHigh('')"
-                    id="">
+                  <input type="checkbox" onclick="toggleCheckboxHigh('')" id="">
                   <span class="toggle_span"></span>
                 </label>
               </div>
@@ -670,11 +655,11 @@
         </div>
       </div>
     </div>
- 
+
     <!-- *******oee stats******* -->
     <div class="row mt-3 p-3 main_oee_daily_parent_div">
       <!-- ******************sarang lohe*************** -->
-     
+
       <div class="col-lg main_power_consumption_graph_div">
         <div class=" mt-4">
           <div class="">
@@ -799,7 +784,7 @@
                 id="DateDisplay_css_all_device_power_consumption_graph_div">
                 <div id="startDateDisplay_all_device_power_consumption_graph"
                   class="startDateDisplay_css_all_device_power_consumption_graph">
-                  
+
                   <!-- Start Date -->
                 </div>
                 <div id="endDateDisplay_all_device_power_consumption_graph"
@@ -914,7 +899,7 @@
       <!-- **********threephase end****************************** -->
 
 
-     
+
       <div class="col-lg main_power_consumption_graph_div">
         <div class="row mt-4">
           <h7 class="main_running_title px-3">AIR CONDITIONER POWER CONSUMPTION</h7>
@@ -986,11 +971,11 @@
           </div>
         </div>
       </div>
-     
+
     </div>
 
     <div class="row p-3 mt-3 main_ac_parent_div">
-   
+
       <div class="col main_ac_child_div">
         <h7 class="mt-4 main_highbay_box_title">AIR</h7>
         <h7 class="main_highbay_box_title">CONDITIONER</h7>
@@ -1010,7 +995,7 @@
       <!-- AIR CONDITIONER end -->
 
       <!-- SMART SMOKE DETECTOR start -->
-     
+
       <div class="col main_ac_child_div">
         <h7 class="mt-4 main_highbay_box_title">SMART SMOKE</h7>
         <h7 class="main_highbay_box_title">DETECTOR</h7>
@@ -1020,7 +1005,7 @@
         </div>
         <div class="main_s_s_value">{{ device_ids | length }}/1</div>
       </div>
-     
+
       <!-- SMART SMOKE DETECTOR end -->
 
       <!-- TOTAL POWER CONSUMPTION start -->
@@ -1135,7 +1120,7 @@
 
 
 
-  </div>
+    </div>
   </div>
   <!-- **********AC graph end************** -->
 
@@ -1157,7 +1142,7 @@
     <div class="py-3">Powered by <strong class="ml-1">EVOLUZN</strong></div>
   </footer>
   <!-- FOOTER START -->
-  
+
   <script src="../static/js/main_dashboard.js"></script>
 
   <script src="../static/js/jquery.js"></script>
