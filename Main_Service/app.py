@@ -243,7 +243,6 @@ def get_user_name_from_token():
         return redirect('/')
 
     user_id = payload.get('user_id')
-    print("user_id from token:", user_id)
     email = payload.get('email')
     if not user_id:
         return jsonify({'message': 'Invalid token payload'}), 400
@@ -767,6 +766,7 @@ def get_products_for_company(company_name, username):
 @app.context_processor
 def inject_user_products():
     default = {'products': [], 'company_name': 'Guest', 'username': None}
+    
     token_info = get_user_name_from_token()
     if not token_info:
         return default
@@ -777,14 +777,29 @@ def inject_user_products():
         return default
 
     product_rows = get_products_for_company(company_name, username)
-    product_types = [p['product_type'] for p in product_rows]
+    
+    # Ensure it's a list
+    if isinstance(product_rows, str):
+        # maybe a single product name as string
+        product_rows = [product_rows]
+    elif not isinstance(product_rows, list):
+        product_rows = []
+
+    # If elements are dicts, extract 'product_type', else use the string directly
+    product_types = []
+    for p in product_rows:
+        if isinstance(p, dict):
+            product_types.append(p.get('product_type'))
+        elif isinstance(p, str):
+            product_types.append(p)
+
+    print("Injected products for user:", product_types, product_rows)
 
     return {
         'products': product_types,
         'company_name': company_name,
         'username': username
     }
-
 
 
 # @app.route('/home')
