@@ -422,7 +422,7 @@ img.dashboard_btn {
 
 .dashboard_content_dropdown {
   display: none;
-  position: absolute;
+  position: fixed;
   bottom: 10%;
   left: 4%;
   z-index: 9999;

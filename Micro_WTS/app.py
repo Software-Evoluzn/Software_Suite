@@ -48,7 +48,7 @@ SMTP_PORT = 587  # TLS port
 SENDER_EMAIL = "shilpaevoluzn@gmail.com"
 SENDER_NAME = "Shilpa"
 SENDER_PASSWORD = "ucma aapb quiv mnos"
-EMAIL_RECEIVER = ["dhoteshilpa9@gmail.com","shilpa.snable@gmail.com","pbhoyar622@gmail.com","anjali@evoluzn.in"]
+EMAIL_RECEIVER = ["dhoteshilpa9@gmail.com","shilpa.snable@gmail.com"]
 
 # Email server setup
 # SMTP_SERVER = 'smtp.gmail.com'
@@ -581,14 +581,16 @@ def get_latest_device_data(user_email):
 
         company_name = user['company_name']
         username = user['name']
-        print("Company Name:", company_name, username)
+        print("Company Name:", company_name, "UserName:", username)
 
         # Step 2: Get all active devices for that company
         cursor.execute("""
             SELECT id AS device_id, serial_number, graph_duration
             FROM product_details
-            WHERE LOWER(user_access) LIKE %s AND product_type = 'Wiretempsync'
-        """, (username,))
+            WHERE LOWER(user_access) LIKE %s 
+            AND product_type = 'Wiretempsync'
+        """, (f"%{username.lower()}%",))
+
         devices = cursor.fetchall()
 
 
@@ -616,7 +618,7 @@ def get_latest_device_data(user_email):
                 WHERE device_id = %s
             """, (serial_number,))
 
-            print("serial_number-->", serial_number)
+            # print("serial_number-->", serial_number)
             
             panel_rows = cursor.fetchall()
             
@@ -665,7 +667,7 @@ def get_latest_device_data(user_email):
                         "MAX": max_value
                     }
 
-            print("sensor-0->",result)
+            # print("sensor-0->",result)
             
         for serial_number, panels in panel_structure.items():
 
@@ -690,7 +692,7 @@ def get_latest_device_data(user_email):
             """, (serial_number,))
             sensor_row = cursor.fetchone()
 
-            print("sensor data is query", sensor_row)
+            # print("sensor data is query", sensor_row)
 
             sensor_row = sensor_row if sensor_row else default_data
 
@@ -708,7 +710,7 @@ def get_latest_device_data(user_email):
 
                 final_data[serial_number][panel_name] = phase_data
 
-        print("result--<", result)
+        # print("result--<", result)
  
         print("graph-->", graph_duration_data)
 
@@ -820,14 +822,6 @@ def dashboard():
         is_admin=is_admin,
         devices=devices
     )
-
-# def safe_value(value):
-#     if isinstance(value, (datetime.datetime, datetime.date)):
-#         return value.isoformat()
-#     elif value is None:
-#         return ""
-#     return value
-
 
 @app.route('/wts_home', methods=['POST', 'GET'])
 def home():
