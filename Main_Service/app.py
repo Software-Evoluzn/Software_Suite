@@ -754,7 +754,6 @@ def get_products_for_company(company_name, username):
         # Normalize
         access_list = [u.strip().lower() for u in access.split(",")]
 
-        # Check if user has permission
         if username in access_list:
             allowed_product_types.append(row["product_type"])
 
