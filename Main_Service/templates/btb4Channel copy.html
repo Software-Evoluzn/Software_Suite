@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BTB4Channel Dashboard</title>
+    <link href="../static/css/bootstrap.css" rel="stylesheet" />
+    <link rel="stylesheet" href="../static/css/btb4channel.css" />
+</head>
+
+<body>
+    <div id="sidebar-placeholder">
+        {% include 'navbar_backup.html' %}
+    </div>
+
+    <div class="main_content d-flex flex-column min-vh-100">
+
+        <!-- 4 Channel BTB Dashboard -->
+        <div class="dashboard-box relative">
+            <div class="section-title" data-device="BTB4ChannelF0BFD5">4 CHANNEL BTB</div>
+
+            <div class="card btb-card">
+                <div class="btb-main">
+
+                    <!-- LEFT SIDE: MASTER SWITCH -->
+                    <div class="btb-left">
+                        <h2 class="btb-title">MASTER BTB</h2>
+                        <p class="btb-subtitle">(Control all BTBs with one switch)</p>
+                        <label class="switch large-switch">
+                            <input type="checkbox" id="btbMasterSwitch" data-device="4Channel" />
+                            <span class="slider"></span>
+                        </label>
+                        <div class="switch-labels">
+                            <span class="off">OFF</span>
+                            <span class="on">ON</span>
+                        </div>
+
+                        <!-- 🔹 Arrow Button for Master BTB -->
+                        <a href="{{ url_for('btb_graph') }}" class="btb-arrow-btn">
+                            <img src="../static/img/right-arrow (2).png" alt="">
+
+                        </a>
+                    </div>
+
+                    <!-- RIGHT SIDE: 4 CHANNEL SWITCHES -->
+                    <div class="btb-right">
+                        <div class="btb-grid">
+
+                            <div class="btb-light">
+                                <h3>BTB 1</h3>
+                                <label class="switch">
+                                    <input type="checkbox" class="btbSwitch" data-device="BTB1" />
+                                    <span class="slider"></span>
+                                </label>
+                                <!-- <a href="/graph/btb1" class="btb-arrow-btn">
+                                    <img src="../static/img/right-arrow (2).png" alt="" alt="arrow" />
+                                </a> -->
+                            </div>
+
+                            <div class="btb-light">
+                                <h3>BTB 2</h3>
+                                <label class="switch">
+                                    <input type="checkbox" class="btbSwitch" data-device="BTB2" />
+                                    <span class="slider"></span>
+                                </label>
+                                <!-- <a href="/graph/btb2" class="btb-arrow-btn">
+                                    <img src="../static/img/right-arrow (2).png" alt="" alt="arrow" />
+                                </a> -->
+                            </div>
+
+                            <div class="btb-light">
+                                <h3>BTB 3</h3>
+                                <label class="switch">
+                                    <input type="checkbox" class="btbSwitch" data-device="BTB3" />
+                                    <span class="slider"></span>
+                                </label>
+                                <!-- <a href="/graph/btb3" class="btb-arrow-btn">
+                                    <img src="../static/img/right-arrow (2).png" alt="" alt="arrow" />
+                                </a> -->
+                            </div>
+
+                            <div class="btb-light">
+                                <h3>BTB 4</h3>
+                                <label class="switch">
+                                    <input type="checkbox" class="btbSwitch" data-device="BTB4" />
+                                    <span class="slider"></span>
+                                </label>
+                                <!-- <a href="/graph/btb4" class="btb-arrow-btn">
+                                    <img src="../static/img/right-arrow (2).png" alt="" alt="arrow" />
+                                </a> -->
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- pls inset footer backend-->
+        <footer class="py-2 mt-auto text-center">
+            <div> Powered By <span>EVOLUZN</span></div>
+        </footer>
+        <!-- pls inset footer backend-->
+
+    </div>
+    <script src="https://cdn.jsdelivr.net/npm/socket.io-client@4.5.1/dist/socket.io.min.js"></script>
+    <script>
+        
+        const device_data = {{ device_data | tojson }};
+
+        let apiUrl = "";
+        let device = "";
+        const singleMasterSwitch = document.getElementById("singleMasterSwitch");
+        const btbMasterSwitch = document.getElementById("btbMasterSwitch");
+        const btbSwitches = document.querySelectorAll(".btbSwitch");
+
+        let deviceId = document.querySelector('.section-title').dataset.device;
+
+        console.log("Device ID:", deviceId);
+
+        async function loadApiUrl() {
+            try {
+                const res = await fetch("static/js/ip.json");
+                const data = await res.json();
+                apiUrl = data.ip;
+                fetchDevices();
+            } catch (err) {
+                console.error("Error loading API URL:", err);
+            }
+        }
+
+        const socket = io.connect(apiUrl)
+
+        // ✅ When connected
+        socket.on('connect', () => {
+            console.log("✅ Connected to server");
+        });
+
+        btbSwitches.forEach((btbSwitch) => {
+            btbSwitch.addEventListener("change", function () {
+                const isOn = this.checked;
+                const intensity = isOn ? 100 : 0;
+                // const deviceId = `4Channel:${this.dataset.device}`;
+
+                console.log(`BTB Switch Toggled → ${deviceId}, intensity: ${intensity}`);
+
+                // Emit socket event for this BTB switch
+                socket.emit("toggle_device", { device: deviceId, intensity });
+
+                // 🔸 Update master switch based on BTB states
+                const anySwitchOn = Array.from(btbSwitches).some(s => s.checked);
+                btbMasterSwitch.checked = anySwitchOn;
+
+                console.log(`Master Switch State Updated → ${anySwitchOn ? "ON" : "OFF"}`);
+            });
+        });
+
+
+        btbMasterSwitch.addEventListener("change", function () {
+            const isOn = this.checked;
+            const intensity = isOn ? 100 : 0;
+            // const deviceId = btbMasterSwitch.dataset.device;
+
+            console.log(`Master Switch Manually Toggled → ${isOn ? "ON" : "OFF"}`);
+
+            btbSwitches.forEach((btbSwitch) => {
+                btbSwitch.checked = isOn;
+                console.log(`Setting ${deviceId} to ${isOn ? "ON" : "OFF"}`);
+            });
+
+            socket.emit("toggle_device", { device: deviceId, intensity });
+        });
+
+        // Initial load
+        if (device_data) {
+            const Single_Phase = device_data["Single_Phase"];
+            const BTB = device_data["BTB4Channel"];
+
+            if (Single_Phase) {
+                if (Single_Phase.load_status === '0') {
+                    singleMasterSwitch.checked = 0;
+                } else if (Single_Phase.load_status === '1') {
+                    console.log("Single Phase load_status is valid.");
+                    singleMasterSwitch.checked = 1;
+                }
+            }
+
+            if (BTB) {
+                const { relay1, relay2, relay3, relay4 } = BTB;
+                btbSwitches.forEach((btbSwitch, index) => {
+                    const relayState = [relay1, relay2, relay3, relay4][index];
+                    btbSwitch.checked = relayState === 1;
+                    console.log("Single Phase load_status is valid.");
+                    const anySwitchOn = Array.from(btbSwitches).some(s => s.checked);
+                    btbMasterSwitch.checked = anySwitchOn;
+                });
+            }
+        }
+
+    </script>
+</body>
+
+</html>

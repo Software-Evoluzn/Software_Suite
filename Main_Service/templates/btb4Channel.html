@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard</title>
+    <link rel="icon" type="image/png" href="../static/img/evoluzn_title_logo.png">
+    <link href="../static/css/bootstrap.css" rel="stylesheet" />
+    <link href="../static/css/dashboard.css" rel="stylesheet" />
+    <script src="../static/js/alert.js"></script>
+    <style>
+        .device-card {
+            width: 400px;
+            height: 120px;
+            background: white;
+            border-radius: 14px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+            font-family: Arial, sans-serif;
+        }
+
+        .device-card.no-warning .device-content {
+            height: 100%;
+            display: flex;
+            align-items: center;
+        }
+
+
+        /* Top Warning Bar */
+        .warning-bar {
+            background: #ff4756e8;
+            color: white;
+            padding: 8px 12px;
+            font-size: 14px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-weight: 500;
+        }
+
+        .warning-icon {
+            font-size: 16px;
+        }
+
+        /* Main Content */
+        .device-content {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 16px;
+        }
+
+        .device-name {
+            margin: 0;
+            font-size: 18px;
+        }
+
+        .status {
+            font-size: 14px;
+        }
+
+
+        /* Right Side Icons */
+        .right {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        /* Arrow Button */
+        .arrow-btn {
+            width: 34px;
+            height: 34px;
+            border-radius: 50%;
+            background: #e5e7eb;
+            border: none;
+            cursor: pointer;
+            font-size: 15px;
+            color: #374151;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="d-flex flex-column min-vh-100">
+
+        <div class="p-3 dashboard_main_heading_logout">
+            <h6>Main Dashboard</h6>
+            {% include 'setting.html' %}
+        </div>
+
+     
+        <div id="device-container" class="d-flex flex-row flex-wrap p-4 gap-4">
+
+
+            {% for device_name, status in btb_device_data.items() %}
+            <div class="device-card no-warning">
+
+                <div class="device-content">
+                    <div class="left">
+                        <h3 class="device-name">{{ device_name }}</h3>
+                        <span class="status {{ 'online' if status == 'online' else 'offline' }}">
+                            {{ status.capitalize() }}
+                        </span>
+                    </div>
+
+                    <div class="right">
+                        <!-- WiFi -->
+                        <img src="../static/img/wifi.png"
+                            style="display: {{ 'inline' if status=='online' else 'none' }};">
+                        <img src="../static/img/wifi_off.png"
+                            style="display: {{ 'none' if status=='online' else 'inline' }};">
+
+                        <!-- ✅ Arrow Button -->
+                        <button class="arrow-btn">
+                            <a href="{{ url_for('btb_graph', device_id=device_name) }}">
+                                ➡
+                            </a>
+                        </button>
+                    </div>
+                </div>
+
+            </div>
+            {% endfor %}
+
+
+        </div>
+
+
+        <footer class="py-2 mt-auto text-center">
+            <div>Powered By <span>EVOLUZN</span></div>
+        </footer>
+
+    </div>
+    <script src="../static/js/socket.io.js"></script>
+    <script>
+
+        socket.on('btb_status_update', function (data) {
+            const deviceId = data.device_id;
+            const status = data.device_status;
+
+            const card = Array.from(document.querySelectorAll('.device-card')).find(c => {
+                return c.querySelector('.device-name').textContent.trim() === deviceId;
+            });
+
+            if (!card) return;
+
+            const statusSpan = card.querySelector('.status');
+
+            if (status === 'online') {
+                statusSpan.innerText = 'Online';
+                statusSpan.classList.add('online');
+                statusSpan.classList.remove('offline');
+            } else {
+                statusSpan.innerText = 'Offline';
+                statusSpan.classList.add('offline');
+                statusSpan.classList.remove('online');
+            }
+        });
+    </script>
+
+
+
+
+<!-- yeh python function daalna hain badmain  -->
+<!-- @app.route('/btb/graph/<device_id>')
+def btb_graph(device_id):
+
+    conn = connect_db()
+    cursor = conn.cursor(dictionary=True)
+ print("BTB Device ID ", device_id) -->
+
+    <!-- cursor.execute("""
+        SELECT *
+        FROM btb_sensor_data
+        WHERE device_id = %s
+        ORDER BY timestamp DESC
+        LIMIT 1
+    """, (device_id,))
+
+    latest_data = cursor.fetchone()
+
+    cursor.close()
+    conn.close()
+
+    return render_template(
+        'btb_graph.html',
+        device_id=device_id,
+        latest_data=latest_data
+    ) --> 
+
+    <!-- /btb/graph/BTB001 -->
+
+
+<!-- -==========--------==================================== -->
+<!-- socket-------------------------------------------------- -->
+    <!-- socketio.emit("btb_status_update", {
+    "device_id": "BTB001",
+    "device_status": "online"
+}) -->
+
+<!-- ..................========================================================== -->
+<!-- btb graph.html page ----------- -->
+
+<!-- <h2>BTB Graph Page</h2>
+<h3>Device ID: {{ device_id }}</h3>
+
+<pre>
+{{ latest_data }}
+</pre>
+
+<script src="../static/js/socket.io.js"></script>
+<script>
+    var socket = io();
+
+    socket.emit("btb_graph_data", {
+        device_id: "{{ device_id }}"
+    });
+</script>
+ -->
+
+    <!-- <script src="../static/js/graph.js"></script> -->
+    <script src="../static/js/dashboard.js"></script>
+</body>
+
+</html>

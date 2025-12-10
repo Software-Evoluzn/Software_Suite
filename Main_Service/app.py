@@ -34,6 +34,7 @@ micro_client = socketio_client.Client()
 WTS_URL = 'http://192.168.1.25:5002'
 RUNNING_URL = 'http://192.168.1.19:5003'
 OFFICE_URL = 'http://192.168.1.19:5004'
+BTB_URL = 'http://192.168.1.25:5005'
 
 SECRET_KEY = 'evoluzn@123'
 
@@ -159,6 +160,29 @@ def create_tables():
         );
     """)
 
+    btb4channel_query = ("""
+        CREATE TABLE IF NOT EXISTS phase_data (
+                    id INT AUTO_INCREMENT PRIMARY KEY,
+                    device_id TEXT,
+                    voltage1 REAL,
+                    current1 REAL,
+                    power1 REAL,
+                    voltage2 REAL,
+                    current2 REAL,
+                    power2 REAL,
+                    voltage3 REAL,
+                    current3 REAL,
+                    power3 REAL,
+                    relay1 INTEGER,
+                    relay2 INTEGER,
+                    relay3 INTEGER,
+                    relay4 INTEGER,
+                    load_status TEXT,
+                    device_type TEXT,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                );
+         """)
+
     # ALTER TABLE alert_temp ADD UNIQUE unique_index (device_name, timestamp)
     conn.commit()
 
@@ -170,6 +194,7 @@ def create_tables():
         cursor.execute(temp_data_query)
         cursor.execute(pannel_table_query)
         cursor.execute(sensor_data_query)
+        cursor.execute(btb4channel_query)
         cursor.execute(product_query)
         cursor.execute(product_details_query)
         conn.commit()
@@ -506,7 +531,6 @@ def login():
 
 @app.route('/admin', methods=['GET', 'POST'])
 def admin_page():
-    
     return render_template('company_registration.html')
 
 # --- Updated Flask Route ---
@@ -1138,7 +1162,6 @@ def download_xlsx_individual_office_light():
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
-
 @app.route('/office_light', methods=['GET', 'POST'])
 def office_light():
     global ids, devices
@@ -1608,6 +1631,69 @@ def disconnect():
 # ======================= WTS Microservice Integration END =======================
 
 
+
+# ======================= MicroService For BTB 4Channel  START ========================
+try:
+    micro_client.connect(BTB_URL)
+    print("Connected to BTB service.")
+except ConnectionError as e:  # ✅ Use imported ConnectionError
+    print(f"[WARNING] Could not connect to BTB service at {BTB_URL}: {e}")
+
+@app.route('/btb4channel')
+def btb4channel():
+    result = get_user_name_from_token()
+    email = result.get('email')
+    name = result.get('company_name')
+    user_name = result.get('username')
+
+    # print("btb4channel page", email, "-->",user_name, "-->", name)
+
+    # Make request to microservice
+    try:
+        response = requests.get(f'{BTB_URL}/btb4channel', params={'user_name': user_name, 'company_name': name})
+        print("Response from microservice:", response)
+        micro_data = response.json()
+        print("Response micro_data microservice:", micro_data)
+
+        if micro_data.get('status') != 'success':
+            return jsonify({'message': 'Error fetching device data'}), 500
+
+        return render_template(
+            'btb4channel.html',
+            name=name,
+            device_data=micro_data['device_data']
+        )
+
+    except requests.exceptions.RequestException as e:
+        print(f"Request to microservice failed: {e}")
+        return jsonify({'message': 'Failed to connect to microservice'}), 500
+
+
+@socketio.on("toggle_device")
+def toggle_device(data):
+    device_id = data["device"]
+    intensity = data["intensity"]
+
+    print(f"Toggling device {device_id}, intensity {intensity}")
+
+    # Step 1: Find which device microservice to call
+    response = requests.post(f'{BTB_URL}/handle_on_off',json={
+        "device": f"BTB4Channel:{device_id}",
+        "intensity": intensity
+    })
+    print("Response from BTB microservice:", response.json())
+    return {"status": "OK"}
+
+
+@app.route('/btb_graph', methods=['GET'])
+def btb_graph():
+    result = get_user_name_from_token()
+    email = result.get('email')
+    name = result.get('company_name')
+
+    print(f"btb_graph page for device", email)
+
+    return render_template('btb_graph.html', name=name)
 
 # ======================= MicroService For Running Light  START ========================
 try:
