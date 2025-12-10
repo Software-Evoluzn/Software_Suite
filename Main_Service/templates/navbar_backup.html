@@ -117,6 +117,17 @@
       </a>
       {% endif %}
 
+      {% if 'BTB4Channel' in products %}
+      <a class="sidebar-link {% if active_page == 'temperature' %}active{% endif %}" href="/btb4channel">
+        <div class="sidebar_dashboard_icon">
+          <i class="fa-solid fa-temperature-half" style="font-size: 25px;"></i>
+        </div>
+        <div class="sidebar_dashboard_title dashboard_title_dashboard" style="display: flex; justify-content: center;">
+          BTB 4Channel
+        </div>
+      </a>
+      {% endif %}
+
     </aside>
     <div class="px-2">
       <hr class="sidebar_hr">
