@@ -191,17 +191,88 @@ mqtt_client_conn = connect_mqtt()
 # ============================================================
 # FLASK ROUTES
 
+# @app.route('/btb4channel', methods=['POST', 'GET'])
+# def btb4channel():
+
+#     user_name = request.args.get('user_name')
+#     company_name = request.args.get('company_name')
+
+#     print("Userr Name ",user_name, "--> Company Name ", company_name)
+
+#     conn = connect_db()
+#     cursor = conn.cursor()
+
+#     cursor.execute("""
+#         SELECT serial_number
+#         FROM product_details
+#         WHERE company_name = %s
+#         AND product_type = 'BTB4Channel'
+#         AND FIND_IN_SET(%s, REPLACE(user_access, ' ', ''))
+#     """, (company_name, user_name))
+
+#     devices = cursor.fetchall()
+#     print("Devices List:", devices)
+
+#     device_data = {}
+
+#     # Loop correctly (only device_name returned)
+#     for (device_name,) in devices:
+#         cursor.execute("""
+#             SELECT *
+#             FROM phase_data
+#             WHERE device_id = %s
+#             ORDER BY created_at DESC, id DESC
+#             LIMIT 1
+#         """, (device_name,))
+        
+#         last_record = cursor.fetchone()
+
+#         if last_record:
+#             columns = [column[0] for column in cursor.description]
+#             record_dict = dict(zip(columns, last_record))
+
+#             # Use product_type manually since not selected
+#             dtype_key = "BTB4Channel"
+
+#             device_data[dtype_key] = record_dict
+
+#     format_strings = ','.join(['%s'] * len(devices))
+#     cursor.execute(f"""
+#         SELECT device_id, device_status 
+#         FROM device_status
+#         WHERE device_id IN ({format_strings})
+#     """, tuple(devices))
+
+#     status_rows = cursor.fetchall()
+        
+#     device_status_dict = {row['device_id']: row['device_status'] for row in status_rows}
+
+#     # 4️⃣ Merge status into device_data
+#     for device in device_names:
+#         if device in device_data_dict:
+#             device_data_dict[device]['status'] = device_status_dict.get(device, 'offline') 
+
+
+#     conn.close()
+
+#     # Step 3: Send to HTML
+#     return jsonify({
+#                 'status': 'success',
+#                 'device_data': device_data
+#             })
+
 @app.route('/btb4channel', methods=['POST', 'GET'])
 def btb4channel():
 
     user_name = request.args.get('user_name')
     company_name = request.args.get('company_name')
 
-    print("Userr Name ",user_name, "--> Company Name ", company_name)
+    print("User Name:", user_name, "--> Company Name:", company_name)
 
     conn = connect_db()
-    cursor = conn.cursor()
+    cursor = conn.cursor(dictionary=True)   # Fetch rows as dict
 
+    # 1️⃣ Get all BTB4Channel devices for this user/company
     cursor.execute("""
         SELECT serial_number
         FROM product_details
@@ -210,13 +281,17 @@ def btb4channel():
         AND FIND_IN_SET(%s, REPLACE(user_access, ' ', ''))
     """, (company_name, user_name))
 
-    devices = cursor.fetchall()
-    print("Devices List:", devices)
+    devices = [row['serial_number'] for row in cursor.fetchall()]
+    print("Devices:", devices)
 
-    device_data = {}
+    if not devices:
+        return jsonify({"status": "no devices", "data": {}})
 
-    # Loop correctly (only device_name returned)
-    for (device_name,) in devices:
+    device_data = {}   # final response
+
+    # 2️⃣ Get latest data for each device
+    for device_name in devices:
+
         cursor.execute("""
             SELECT *
             FROM phase_data
@@ -224,25 +299,42 @@ def btb4channel():
             ORDER BY created_at DESC, id DESC
             LIMIT 1
         """, (device_name,))
-        
+
         last_record = cursor.fetchone()
 
         if last_record:
-            columns = [column[0] for column in cursor.description]
-            record_dict = dict(zip(columns, last_record))
+            device_data[device_name] = last_record
+        else:
+            device_data[device_name] = {"device_id": device_name, "message": "no data"}
 
-            # Use product_type manually since not selected
-            dtype_key = "BTB4Channel"
+    # 3️⃣ Fetch status for all devices
+    format_strings = ','.join(['%s'] * len(devices))
 
-            device_data[dtype_key] = record_dict
+    cursor.execute(f"""
+        SELECT device_id, device_status
+        FROM device_status
+        WHERE device_id IN ({format_strings})
+    """, tuple(devices))
 
+    status_rows = cursor.fetchall()
+
+    # Convert to dictionary: { device_id: status }
+    device_status = {row['device_id']: row['device_status'] for row in status_rows}
+
+    # 4️⃣ Merge status into device_data
+    for device in devices:
+        device_data[device]['status'] = device_status.get(device, 'offline')
+
+    print("Final Device Data with Status:", device_data)
+
+    cursor.close()
     conn.close()
 
-    # Step 3: Send to HTML
+    # 5️⃣ Return combined response
     return jsonify({
-                'status': 'success',
-                'device_data': device_data
-            })
+        "status": "success",
+        "device_data": device_data
+    })
 
 
 # ============================================================

@@ -1,0 +1,332 @@
+/* =========================================================
+   GLOBAL BASE
+========================================================= */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    font-family: Arial, sans-serif;
+}
+
+body {
+    background: #fff;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+}
+
+/* =========================================================
+   DASHBOARD WRAPPER
+========================================================= */
+.dashboard {
+    width: 1200px;
+    height: 700px;
+    background: #fff;
+    border-radius: 12px;
+    padding: 20px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    position: relative;
+}
+
+/* Header */
+.dashboard-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 15px;
+}
+
+.dashboard-header h2 {
+    font-size: 25px;
+    margin: 0;
+}
+
+.graph_go_back_button {
+    background: #F2F9FF;
+    position: absolute;
+    top: 23px;
+    left: 25px;
+    color:black;
+    width: 100px;
+    height: 35px;
+    border: 1px solid #c9c9c9;
+    border-radius: 5px;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+}
+
+.graph_go_back_button img {
+    width: 15px;
+    height: 15px;
+}
+
+
+/* =========================================================
+   CARD MAIN BLOCK
+========================================================= */
+.card {
+    border: 1px solid #ddd;
+    border-radius: 12px;
+    height: calc(100% - 50px);
+    padding: 0;
+}
+
+.card-header {
+    background: lab(98 -11.85 7.29);
+    color: #23743F;
+    padding: 21px 19px;
+    border-radius: 11px 0 16px 0;
+    font-size: 30px;
+    font-weight: bold;
+    margin-bottom: 15px;
+    display: inline-block;
+}
+
+/* =========================================================
+   FILTER BAR (right side filters)
+========================================================= */
+.right-side {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 12px;
+    margin: 10px 20px;
+    padding: 10px 15px;
+}
+
+.filter-group {
+    display: flex;
+    gap: 6px;
+}
+
+.filter-select {
+    padding: 8px 12px;
+    border-radius: 8px;
+    border: 1px solid #d3d7f3;
+    background: #fff;
+    font-size: 14px;
+    color: #333;
+    cursor: pointer;
+    transition: 0.2s;
+}
+
+.filter-select:hover {
+    border-color: #4a68f0;
+}
+
+/* Apply button */
+.btn {
+    background: #4a68f0;
+    color: #fff;
+    font-weight: 500;
+    border: none;
+    cursor: pointer;
+    font-size: 14px;
+    padding: 8px 14px;
+    border-radius: 8px;
+    transition: 0.3s;
+}
+
+.btn:hover {
+    background: #3655e0;
+}
+
+/* =========================================================
+   DATE-RANGE INPUTS
+========================================================= */
+.date-range-container {
+    display: none;
+    margin: 10px 0 10px 30px;
+    align-items: center;
+    gap: 8px;
+}
+
+.date-range-container label {
+    font-size: 17px;
+    font-weight: 500;
+}
+
+.date-input {
+    padding: 6px 10px;
+    border-radius: 6px;
+    border: 1px solid #ccc;
+    font-size: 13px;
+}
+
+.date-separator {
+    font-weight: bold;
+    color: #4a68f0;
+}
+
+/* =========================================================
+   CHART SECTION
+========================================================= */
+.chart-container {
+    width: 100%;
+    overflow-x: auto;
+}
+
+canvas {
+    min-width: 100%;
+    max-height: 400px;
+}
+
+#chartLabelText {
+    text-align: center;
+    margin-top: 15px;
+    font-weight: 600;
+    color: #444;
+}
+
+/* =========================================================
+   MODAL + BACKDROP (ROI / future)
+========================================================= */
+#backdrop {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.5);
+    display: none;
+    z-index: 99;
+}
+
+.modal {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    width: 740px;
+    max-height: 90vh;
+
+    background: #fff;
+    border-radius: 10px;
+    padding: 20px;
+
+    transform: translate(-50%, -50%);
+    display: none;
+    overflow-y: auto;
+    z-index: 100;
+
+    box-shadow: 0 8px 24px rgba(0,0,0,0.2);
+}
+
+/* Modal header */
+.modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.modal-header h2 {
+    font-size: 20px;
+    margin-left: 250px;
+}
+
+.close {
+    font-size: 20px;
+    font-weight: bold;
+    cursor: pointer;
+}
+
+/* =========================================================
+   FORM GRID (Input layout inside modals)
+========================================================= */
+.section-title {
+    color: #4e73df;
+    font-weight: 600;
+    margin: 15px 0 10px;
+    font-size: 14px;
+}
+
+.form-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 12px 20px;
+    margin-bottom: 15px;
+}
+
+.form-grid label {
+    font-size: 13px;
+    color: #333;
+    margin-bottom: 4px;
+    display: block;
+}
+
+.form-grid input {
+    width: 95%;
+    padding: 8px;
+    border: 1px solid #4E81DF;
+    border-radius: 6px;
+    font-size: 14px;
+}
+
+.output-box {
+    background: #f8f9fc;
+    border: 1px solid #e1e1e1;
+    border-radius: 6px;
+    padding: 8px;
+    font-size: 14px;
+    color: #444;
+}
+
+/* =========================================================
+   TIME INPUT BLOCKS
+========================================================= */
+.time-inputs {
+    display: flex;
+    justify-content: space-between;
+    gap: 15px;
+    margin-bottom: 15px;
+}
+
+.time-inputs div {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+}
+
+.time-inputs label {
+    font-size: 18px;
+    font-weight: 500;
+    margin: 2px 0 2px 5px;
+}
+
+.time-inputs input {
+    padding: 8px;
+    border: 1px solid #ddd;
+    background: #f7f8fc;
+    border-radius: 6px;
+    margin: 0 5px;
+}
+
+/* SET button */
+.set-btn {
+    background: #4d7eff;
+    border: none;
+    padding: 8px 20px;
+    border-radius: 6px;
+    color: #fff;
+    font-size: 14px;
+    cursor: pointer;
+}
+
+.set-btn:hover {
+    background: #3b66d9;
+}
+
+
+.dashboard-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 15px;
+}
+
+.dashboard-header h2 {
+    font-size: 25px;
+    text-align: center;
+    flex: 1;
+    margin: 0;
+}
