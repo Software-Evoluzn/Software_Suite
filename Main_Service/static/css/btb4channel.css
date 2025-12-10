@@ -6,12 +6,22 @@
 }
 
 body {
-    background: #f5f5f5;
-    display: flex;
-    justify-content: center;
-    padding: 15px;
-    overflow-y: auto;
-    min-height: 100vh;
+    margin: 0;
+    padding: 0;
+    font-family: "DM Sans", sans-serif;
+    background-color: #F9F9F9;
+}
+
+.main_content {
+    padding: 5px;
+    margin-left: 164px;
+}
+
+@media (max-width: 768px) {
+    .main_content {
+        margin-left: 0;
+        margin-top: 0;
+    }
 }
 
 .container {
@@ -227,5 +237,3 @@ input:checked+.slider:before {
     height: 15px;
     object-fit: contain;
 }
-
-

@@ -325,8 +325,6 @@ def btb4channel():
     for device in devices:
         device_data[device]['status'] = device_status.get(device, 'offline')
 
-    print("Final Device Data with Status:", device_data)
-
     cursor.close()
     conn.close()
 

@@ -505,7 +505,7 @@ def save_device_status(device_id, status):
         """, (device_id, status, datetime.now()))
 
         conn.commit()
-
+        print(f"Device {device_id} status updated to {status}")
         socketio.emit('status_update', {
             'device_id': device_id,
             'device_status': status
@@ -1720,9 +1720,6 @@ def btb4channel():
     name = result.get('company_name')
     user_name = result.get('username')
 
-    # print("btb4channel page", email, "-->",user_name, "-->", name)
-
-    # Make request to microservice
     try:
         response = requests.get(f'{BTB_URL}/btb4channel', params={'user_name': user_name, 'company_name': name})
         print("Response from microservice:", response)
@@ -1731,7 +1728,6 @@ def btb4channel():
 
         if micro_data.get('status') != 'success':
             return jsonify({'message': 'Error fetching device data'}), 500
-            
 
         return render_template(
             'btb4channel.html',
@@ -1765,6 +1761,27 @@ def btb_graph():
     result = get_user_name_from_token()
     email = result.get('email')
     name = result.get('company_name')
+
+    result = get_user_name_from_token()
+    email = result.get('email')
+    name = result.get('company_name')
+    user_name = result.get('username')
+    
+    try:
+        response = requests.get(f'{BTB_URL}/btb4channel', params={'user_name': user_name, 'company_name': name})
+        print("Response from microservice:", response)
+        micro_data = response.json()
+        print("Response micro_data microservice:", micro_data)
+
+        if micro_data.get('status') != 'success':
+            return jsonify({'message': 'Error fetching device data'}), 500
+    
+        return render_template('btb_graph.html', name=name,
+            device_data=micro_data['device_data'])
+    
+    except requests.exceptions.RequestException as e:
+        print(f"Request to microservice failed: {e}")
+        return jsonify({'message': 'Failed to connect to microservice'}), 500
 
     return render_template('btb_graph.html', name=name)
 
