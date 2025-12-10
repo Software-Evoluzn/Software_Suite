@@ -11,7 +11,7 @@ import requests
 from flask_socketio import SocketIO, emit, join_room
 import socketio as socketio_client
 from socketio.exceptions import ConnectionError
-import paho.mqtt.client as mqtt
+import paho.mqtt.client as mqtt_client
 import random
 from flask_cors import CORS
 # from datetime import timezone
@@ -96,6 +96,17 @@ def create_tables():
             timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         );
     """
+
+    device_status_table_query = ("""
+       CREATE TABLE IF NOT EXISTS device_status (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        device_id VARCHAR(50) NOT NULL,
+        device_status VARCHAR(20) DEFAULT 'offline',
+        last_update TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+    )
+    """)
+
+
     temp_data_query = ("""
         CREATE TABLE IF NOT EXISTS temp_data (
             id INT AUTO_INCREMENT PRIMARY KEY,
@@ -155,8 +166,7 @@ def create_tables():
             serial_number VARCHAR(100) NOT NULL UNIQUE,
             user_access VARCHAR(255) NOT NULL  ,
             graph_duration INT DEFAULT 60,
-            inserttimestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-                             
+            inserttimestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP                   
         );
     """)
 
@@ -191,6 +201,7 @@ def create_tables():
         cursor.execute(create_user_table_query)
         cursor.execute(create_company_details_query) 
         cursor.execute(create_admin_table_query)
+        cursor.execute(device_status_table_query)
         cursor.execute(temp_data_query)
         cursor.execute(pannel_table_query)
         cursor.execute(sensor_data_query)
@@ -290,15 +301,36 @@ def get_user_name_from_token():
         'admin': result[2]
     }
 
-broker = "203.109.124.70"
-port = 18889    
-mqttc = mqtt.Client()
+broker = "evoluzn.org"
+port = 18889
+username = "evzin_led"
+password = "63I9YhMaXpa49Eb"  
+# mqttc = mqtt.Client()
 
-def on_connect(client, userdata, flags, rc):
-    if rc == 0:
-        print("Connected to MQTT broker")
-    else:
-        print(f"Failed to connect to MQTT broker with return code {rc}")
+
+def connect_mqtt():
+    """Connect to MQTT broker and subscribe to topic."""
+    def on_connect(client, userdata, flags, rc):
+        if rc == 0:
+            print("✅ Connected to MQTT Broker!")
+            client.subscribe("#", qos=1)
+        else:
+            print(f"❌ Connection failed with code {rc}")
+
+    client = mqtt_client.Client()
+    client.username_pw_set(username, password)
+    client.on_connect = on_connect
+    client.on_message = on_message
+
+    try:
+        print("Connecting to MQTT broker...")
+        client.connect(broker, port)
+        client.loop_start()
+    except Exception as e:
+        print(f"❌ Exception occurred during connection: {e}")
+
+    return client
+
 
 def on_disconnect(client, userdata, rc):
     if rc != 0:
@@ -329,7 +361,25 @@ def on_message(client, userdata, message):
 
         current_time = datetime.now().strftime('%Y-%m-%d %H:%M:00')
 
-        
+        status = payload.replace("{", "").replace("}", "")
+
+        data = status.split(":")
+
+        if len(data) == 2:
+            device_id = data[0].strip()
+            status = data[1].strip().lower()   # normalize
+
+            # print(f"📡 Parsed Data: ID={device_id}, Status={status}")
+
+            # Check if status is online/offline
+            if status in ["online", "offline"]:
+                save_device_status(device_id, status)
+                return
+            else:
+                print("⚠️ Unknown status received, ignoring...")
+                    
+
+
         if "oeeStat" in topic:
             current_time = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
             device_type = "oee"
@@ -432,19 +482,43 @@ def on_message(client, userdata, message):
         e
         print(f"Error: {e}")
 
-mqttc.on_connect = on_connect
-mqttc.on_message = on_message
-    
-def mqtt_connect():
+mqtt_client_conn = connect_mqtt()
+
+def save_device_status(device_id, status):
+    conn = connect_db()
+    cursor = conn.cursor(buffered=True)
+
     try:
-        print("Connecting to MQTT broker...")
-        # mqttc.username_pw_set(username,password)								  
-        mqttc.connect(broker, port)
-        mqttc.loop_start()
-        mqttc.subscribe("#", qos=1)
-    except Exception as e:
-        e
-        # print(f"Error connecting to MQTT broker: {e}")
+        cursor.execute("SELECT id FROM product_details WHERE serial_number = %s", (device_id,))
+        result = cursor.fetchone()
+
+        if result is None:
+            return
+
+        # Update OR insert
+        cursor.execute("""
+            INSERT INTO device_status (device_id, device_status, last_update)
+            VALUES (%s, %s, %s)
+            ON DUPLICATE KEY UPDATE
+                device_status = VALUES(device_status),
+                last_update = VALUES(last_update)
+        """, (device_id, status, datetime.now()))
+
+        conn.commit()
+
+        socketio.emit('status_update', {
+            'device_id': device_id,
+            'device_status': status
+        })
+
+    except mysql.connector.Error as err:
+        print("MySQL Error:", err)
+
+    finally:
+        cursor.close()
+        conn.close()
+
+
 
 @app.route('/')
 def index():
@@ -816,7 +890,7 @@ def inject_user_products():
         elif isinstance(p, str):
             product_types.append(p)
 
-    print("Injected products for user:", product_types, product_rows)
+    # print("Injected products for user:", product_types, product_rows)
 
     return {
         'products': product_types,
@@ -1657,6 +1731,7 @@ def btb4channel():
 
         if micro_data.get('status') != 'success':
             return jsonify({'message': 'Error fetching device data'}), 500
+            
 
         return render_template(
             'btb4channel.html',
@@ -1691,8 +1766,6 @@ def btb_graph():
     email = result.get('email')
     name = result.get('company_name')
 
-    print(f"btb_graph page for device", email)
-
     return render_template('btb_graph.html', name=name)
 
 # ======================= MicroService For Running Light  START ========================
@@ -1715,7 +1788,61 @@ def running_light():
 def favicon():
     return '', 200
 
-mqtt_connect()
+# mqtt_connect()
+
+def device_status_monitoring(client):
+    """ Fetch all devices and send MQTT ping to check online status. """
+    try:
+        print("🚀 Starting Device Status Monitoring...")
+
+        conn = mysql.connector.connect(**db_config)
+        cursor = conn.cursor(dictionary=True)
+
+        # 1. Fetch all active devices
+        cursor.execute("SELECT serial_number FROM product_details")
+        devices = cursor.fetchall()
+
+        print(f"📡 Total Devices Found: {len(devices)}")
+
+        # 2. Mark all devices OFFLINE first
+        for device in devices:
+            device_name = device["serial_number"]
+
+            cursor.execute("""
+                INSERT INTO device_status (device_id, device_status)
+                VALUES (%s, 'offline')
+                ON DUPLICATE KEY UPDATE device_status='offline'
+            """, (device_name,))
+
+        # Commit DB changes
+        conn.commit()
+
+        print("🔄 All devices marked OFFLINE in DB.")
+
+        # 3. Publish MQTT ping for each device
+        for device in devices:
+            device_name = device["serial_number"]
+
+            topic = f"{device_name}/status"   # NO WILDCARD!
+
+            try:
+                client.subscribe(topic, qos=0)
+                print(f"✅ Subscribed to → {topic}")
+            except Exception as e:
+                print(f"❌ Failed to subscribe {topic}: {e}")
+
+        cursor.close()
+        conn.close()
+
+        print("✅ Device status monitoring ping sent successfully!")
+
+    except Exception as e:
+        print(f"❌ Error in device_status_monitoring(): {e}")
+
+
+sending_client = connect_mqtt()
+
+device_status_monitoring(sending_client)
 
 if __name__ == '__main__':
     create_tables()
