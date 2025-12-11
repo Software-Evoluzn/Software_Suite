@@ -1785,6 +1785,61 @@ def btb_graph():
 
     return render_template('btb_graph.html', name=name)
 
+
+@socketio.on('fourchannelBTB_graph_data')
+def fourchannelBTB_graph_data(data):
+    try:
+        print("Received graph request:", data)
+
+        device_id = data.get('device_id')
+        start_date = data.get('startDate')
+        end_date = data.get('endDate')
+        graph_type = data.get('graphSelect')
+        time_select = data.get('timeSelect')
+
+        if not device_id:
+            socketio.emit('fourchannelBTB_graph_data_response',
+                          {'error': 'Missing device_id'}, room=request.sid)
+            return
+
+        # Gateway → Microservice call
+        microservice_url = f"{BTB_URL}/fourchannel_graph"
+
+        payload = {
+            "device_id": device_id,
+            "start_date": start_date,
+            "end_date": end_date,
+            "graph_type": graph_type,
+            "time_select": time_select
+        }
+
+        print("Forwarding to microservice:", payload)
+
+        response = requests.post(microservice_url, json=payload)
+        micro_data = response.json()
+
+        print("Microservice Response:", micro_data)
+
+        # If microservice error
+        if micro_data.get("status") != "success":
+            socketio.emit('fourchannelBTB_graph_data_response',
+                          {'error': 'Microservice error'}, room=request.sid)
+            return
+
+        # Success → send graph data to frontend
+        socketio.emit(
+            'fourchannelBTB_graph_data_response',
+            micro_data.get("graph_data", []),
+            room=request.sid
+        )
+
+    except Exception as e:
+        print("Gateway Socket Error:", e)
+        socketio.emit('fourchannelBTB_graph_data_response',
+                      {'error': str(e)}, room=request.sid)
+
+
+
 # ======================= MicroService For Running Light  START ========================
 try:
     micro_client.connect(RUNNING_URL)

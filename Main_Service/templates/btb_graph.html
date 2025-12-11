@@ -8,6 +8,7 @@
     <link href="../static/css/bootstrap.css" rel="stylesheet" />
     <link rel="stylesheet" href="../static/css/btb_graph.css">
     <link rel="stylesheet" href="../static/css/btb4channel.css" />
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 
 <body>
@@ -20,6 +21,7 @@
     <div class="main_content d-flex flex-column min-vh-100">
         <div>
             <!-- 4 Channel BTB Dashboard -->
+
             <div class="dashboard-box relative">
                 <div class="section-title" data-device="BTB4ChannelF0BFD5">4 CHANNEL BTB</div>
 
@@ -106,7 +108,7 @@
                     <h2>GRAPH DASHBOARD</h2>
                     <div>
                         <a href="{{ url_for('btb4channel') }}"><button class="graph_go_back_button">
-                        <img src="../static/img/arrow (1).png"> GoBack</button></a>
+                                <img src="../static/img/arrow (1).png"> GoBack</button></a>
                     </div>
                 </div>
 
@@ -157,9 +159,17 @@
 
     </div>
 
-        <script src="../static/js/socket.io.js"></script>
+    <script src="../static/js/socket.io.js"></script>
     <script src="../static/js/btb_graph.js"></script>
     <script>
+        const params = new URLSearchParams(window.location.search);
+        const deviceId = params.get("device_id");
+
+        if (deviceId) {
+            // Find the element and update data-device attribute
+            const sectionTitle = document.querySelector(".section-title");
+            sectionTitle.setAttribute("data-device", deviceId);
+        }
 
         const device_data = {{ device_data | tojson }};
 
@@ -167,8 +177,6 @@
         const singleMasterSwitch = document.getElementById("singleMasterSwitch");
         const btbMasterSwitch = document.getElementById("btbMasterSwitch");
         const btbSwitches = document.querySelectorAll(".btbSwitch");
-
-        let deviceId = document.querySelector('.section-title').dataset.device;
 
         console.log("Device ID:", deviceId);
 
