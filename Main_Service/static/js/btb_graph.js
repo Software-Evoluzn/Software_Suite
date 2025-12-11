@@ -1,4 +1,6 @@
 let apiUrl = "";
+const urlParams = new URLSearchParams(window.location.search);
+const device_id = urlParams.get("device_id");
 
 async function loadApiUrl() {
     try {
@@ -80,6 +82,7 @@ function fetchGraphData() {
     socket.emit('fourchannelBTB_graph_data', {
         startDate,
         endDate,
+        device_id: device_id,
         timeSelect: modeSelect,
         graphSelect
     });

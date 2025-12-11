@@ -537,20 +537,39 @@ def single_phase_graph_data(data):
         print("Error in single_phase_graph_data:", e)
         socketio.emit('single_phase_graph_data_response', {'error': str(e)}, room=request.sid)
 
-@socketio.on('fourchannelBTB_graph_data')
-def fourchannelBTB_graph_data(data):
+@app.route("/fourchannel_graph", methods=["POST"])
+def fourchannel_graph():
     try:
-        print("Selected Data for Four Channel BTB graph:", data)
-        start_date = data.get('startDate')
-        end_date = data.get('endDate')
-        timeselect = data.get('timeSelect')  # "today" or "range"
-        graph_type = data.get('graphSelect')  # "power", "voltage", "current"
-        print('graph_type-------------', graph_type, 'timeselect----------', timeselect)
+        data = request.get_json(force=True)
+        print("[MICRO-SERVICE] Received payload:", data)
 
+        # ---------------------------
+        # Validate required fields
+        # ---------------------------
+        required_keys = ["device_id", "start_date", "end_date", "graph_type", "time_select"]
+        missing = [k for k in required_keys if not data.get(k)]
+
+        if missing:
+            return jsonify({
+                "status": "error",
+                "message": f"Missing required fields: {', '.join(missing)}"
+            }), 400
+
+        device_id = data["device_id"]
+        start_date = data["start_date"]
+        end_date = data["end_date"]
+        graph_type = data["graph_type"]
+        time_select = data["time_select"]
+
+        print("graph_type =", graph_type, ":: time_select =", time_select)
+
+        # ---------------------------
+        # MySQL DB Connection
+        # ---------------------------
         conn = connect_db()
-        cursor = conn.cursor()
+        cursor = conn.cursor(dictionary=True)
 
-        # ✅ Define average expressions for both channels
+        # Column AVG mapping
         column_map = {
             'power': '(power1 + power2) / 2.0',
             'voltage': '(voltage1 + voltage2) / 2.0',
@@ -558,78 +577,63 @@ def fourchannelBTB_graph_data(data):
         }
         selected_column = column_map.get(graph_type, '(power1 + power2) / 2.0')
 
-        # ✅ Fetch all device_ids with device_type = '4Channel'
-        cursor.execute("SELECT DISTINCT device_id FROM phase_data WHERE device_type = '4Channel'")
-        device_ids = [row[0] for row in cursor.fetchall()]
+        cursor.execute("SELECT DISTINCT device_id FROM phase_data WHERE device_type = 'BTB4Channel'")
+        device_ids = [row["device_id"] for row in cursor.fetchall()]
 
         if not device_ids:
-            print("⚠️ No devices found with device_type = '4Channel'")
-            socketio.emit('fourchannelBTB_graph_data_response', [], room=request.sid)
-            return
+            return jsonify({"status": "success", "graph_data": []})
 
-        # Dynamic placeholders for the IN clause
-        placeholders = ', '.join(['?'] * len(device_ids))
+        placeholders = ", ".join(["%s"] * len(device_ids))
 
-        if timeselect == "today" or (start_date == end_date and timeselect == "range"):
-            # 🕒 Daily query (hourly average for one or more devices)
+        # ---------------------------
+        # TODAY or same start/end
+        # ---------------------------
+        if time_select == "today" or (start_date == end_date and time_select == "range"):
+
             query = f"""
-                WITH r AS (
-                    SELECT 
-                        CAST(strftime('%H', created_at) AS INTEGER) AS hour,
-                        DATE(created_at) AS date,
-                        ROUND(AVG({selected_column}), 2) AS avg_value
-                    FROM 
-                        phase_data
-                    WHERE 
-                        DATE(created_at) BETWEEN ? AND ?
-                        AND device_id IN ({placeholders})
-                    GROUP BY 
-                        DATE(created_at), strftime('%H', created_at)
-                )
                 SELECT 
-                    r.hour AS hour, 
-                    ROUND(AVG(r.avg_value), 2) AS value
-                FROM 
-                    r
-                GROUP BY 
-                    r.hour
-                ORDER BY 
-                    r.hour;
+                    HOUR(created_at) AS hour,
+                    ROUND(AVG({selected_column}), 2) AS value
+                FROM phase_data
+                WHERE DATE(created_at) BETWEEN %s AND %s
+                AND device_id IN ({placeholders})
+                GROUP BY HOUR(created_at)
+                ORDER BY hour ASC;
             """
+
             params = [start_date, end_date] + device_ids
             cursor.execute(query, params)
             results = cursor.fetchall()
-            response_data = [{'hour': int(row[0]), 'value': float(row[1])} for row in results]
 
-        elif timeselect == "range" and start_date != end_date:
-            # 📅 Range query (daily averages between start and end date)
+            response_data = [
+                {"hour": int(row["hour"]), "value": float(row["value"])}
+                for row in results
+            ]
+
+        # ---------------------------
+        # DATE RANGE (multiple days)
+        # ---------------------------
+        elif time_select == "range" and start_date != end_date:
+
             query = f"""
-                WITH r AS (
-                    SELECT 
-                        DATE(created_at) AS date,
-                        ROUND(AVG({selected_column}), 2) AS avg_value
-                    FROM 
-                        phase_data
-                    WHERE 
-                        DATE(created_at) BETWEEN ? AND ?
-                        AND device_id IN ({placeholders})
-                    GROUP BY 
-                        DATE(created_at)
-                )
                 SELECT 
-                    r.date AS date, 
-                    ROUND(AVG(r.avg_value), 2) AS value
-                FROM 
-                    r
-                GROUP BY 
-                    r.date
-                ORDER BY 
-                    r.date ASC;
+                    DATE(created_at) AS date,
+                    ROUND(AVG({selected_column}), 2) AS value
+                FROM phase_data
+                WHERE DATE(created_at) BETWEEN %s AND %s
+                AND device_id IN ({placeholders})
+                GROUP BY DATE(created_at)
+                ORDER BY date ASC;
             """
+
             params = [start_date, end_date] + device_ids
             cursor.execute(query, params)
             results = cursor.fetchall()
-            response_data = [{'date': str(row[0]), 'value': float(row[1])} for row in results]
+
+            response_data = [
+                {"date": str(row["date"]), "value": float(row["value"])}
+                for row in results
+            ]
 
         else:
             response_data = []
@@ -637,12 +641,20 @@ def fourchannelBTB_graph_data(data):
         cursor.close()
         conn.close()
 
-        socketio.emit('fourchannelBTB_graph_data_response', response_data, room=request.sid)
-        print('socket_response', response_data)
+        # ---------------------------
+        # FINAL RETURN TO GATEWAY
+        # ---------------------------
+        return jsonify({
+            "status": "success",
+            "graph_data": response_data
+        })
 
     except Exception as e:
-        print("Error in fourchannelBTB_graph_data:", e)
-        socketio.emit('fourchannelBTB_graph_data_response', {'error': str(e)}, room=request.sid)
+        print("❌ Error in microservice:", e)
+        return jsonify({
+            "status": "error",
+            "message": str(e)
+        }), 500
 
 
 # ============================================================
