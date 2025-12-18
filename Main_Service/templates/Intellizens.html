@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>IntelliZENS Light Dashboard</title>
+    <link href="../static/css/bootstrap.css" rel="stylesheet" />
+
+    <link rel="stylesheet" href="../static/css/intellizens.css">
+</head>
+
+<body>
+    <div id="sidebar-placeholder">
+        {% include 'navbar.html' %}
+    </div>
+
+    <div class="main_content d-flex flex-column min-vh-100">
+
+        <div id="intellizensContainer"></div>
+
+        <!-- pls inset footer backend-->
+        <footer class="py-2 mt-auto text-center">
+            <div> Powered By <span>EVOLUZN</span></div>
+        </footer>
+        <!-- pls inset footer backend-->
+
+    </div>
+    <script src="https://cdn.jsdelivr.net/npm/socket.io-client@4.5.1/dist/socket.io.min.js"></script>
+
+    <script>
+        window.INTELLIZENS_DEVICES = {{ intellizens_data | tojson }};
+
+        
+        /* ================= CONFIG ================= */
+        const LIGHT_KEYS = ["D1", "D2", "D3", "D4"];
+        let socket = null;
+
+        /* ================= INIT ================= */
+        document.addEventListener("DOMContentLoaded", () => {
+            bootstrap();
+        });
+
+        async function bootstrap() {
+            try {
+                const ipResp = await fetch("/static/js/ip.json", { cache: "no-store" });
+                const { ip } = await ipResp.json();
+
+                socket = io(ip, {
+                    transports: ["websocket"],
+                    reconnection: true,
+                    reconnectionAttempts: 10,
+                    reconnectionDelay: 1000
+                });
+
+                socket.on("connect", () => {
+                    console.log("✅ Socket connected");
+                    renderDevices(window.INTELLIZENS_DEVICES);
+                });
+
+                socket.on("disconnect", () => {
+                    console.warn("⚠ Socket disconnected");
+                });
+
+            } catch (err) {
+                console.error("❌ Bootstrap failed:", err);
+            }
+        }
+
+        /* ================= UI RENDER ================= */
+        function renderDevices(devices) {
+            const wrapper = document.getElementById("intellizensContainer");
+            if (!wrapper || !devices) return;
+
+            wrapper.innerHTML = "";
+
+            Object.entries(devices).forEach(([serial, state]) => {
+                wrapper.appendChild(createDeviceUI(serial, state));
+            });
+        }
+
+        function createDeviceUI(serial, state) {
+            const div = document.createElement("div");
+            div.className = "container";
+
+            div.innerHTML = `
+        <div class="header">${serial} - IntelliZENS Light</div>
+        <div class="panel">
+            <div class="master">
+                <h2>MASTER SWITCH</h2>
+                <div class="toggle-wrapper">
+                    <span>OFF</span>
+                    <label class="switch">
+                        <input type="checkbox" class="masterSwitch">
+                        <span class="slider"></span>
+                    </label>
+                    <span>ON</span>
+                </div>
+            </div>
+
+            <div class="lights">
+                ${LIGHT_KEYS.map((k, i) => `
+                    <div class="light-card">
+                        <h4>LIGHT ${i + 1}</h4>
+                        <label class="switch">
+                            <input type="checkbox" 
+                                   class="lightSwitch" 
+                                   data-light="${k}">
+                            <span class="slider"></span>
+                        </label>
+                    </div>
+                `).join("")}
+            </div>
+        </div>
+    `;
+
+            bindEvents(div, serial, state);
+            return div;
+        }
+
+        /* ================= EVENT BINDING ================= */
+        function bindEvents(container, serial, state) {
+            const masterSwitch = container.querySelector(".masterSwitch");
+            const lights = [...container.querySelectorAll(".lightSwitch")];
+
+            // Initial state
+            lights.forEach(sw => sw.checked = state[sw.dataset.light] === 1);
+            masterSwitch.checked = lights.some(l => l.checked);
+
+            const [, master_id, slave_id] = serial.split(":");
+
+            // Master switch
+            masterSwitch.addEventListener("change", () => {
+                const intensity = masterSwitch.checked ? 1 : 0;
+                lights.forEach(l => l.checked = !!intensity);
+
+                emitCommand({
+                    serial,
+                    master_id,
+                    slave_id,
+                    light: "MASTER",
+                    intensity
+                });
+            });
+
+            // Individual lights
+            lights.forEach(sw => {
+                sw.addEventListener("change", () => {
+                    const intensity = sw.checked ? 1 : 0;
+
+                    emitCommand({
+                        serial,
+                        master_id,
+                        slave_id,
+                        light: sw.dataset.light,
+                        intensity
+                    });
+
+                    masterSwitch.checked = lights.some(l => l.checked);
+                });
+            });
+        }
+
+        /* ================= SOCKET EMIT ================= */
+        function emitCommand(payload) {
+            if (!socket || !socket.connected) {
+                console.warn("⚠ Socket not ready, command dropped");
+                return;
+            }
+
+            socket.emit("intellizens_control", payload);
+            console.log("📡 CMD:", payload);
+        }
+
+    </script>
+
+</body>
+
+</html>

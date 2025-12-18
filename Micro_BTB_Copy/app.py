@@ -104,7 +104,7 @@ def on_message(client, userdata, message):
             SELECT product_type 
             FROM product_details 
             WHERE serial_number = %s 
-            AND product_type IN ('BTB4Channel', 'Plug')
+            AND product_type IN ('BTB4Channel', 'Single_Phase')
             """,
             (device_id,)
         )
@@ -131,7 +131,7 @@ def on_message(client, userdata, message):
 
         if device_type == "Single_Phase":
             # Expected format: {device_id:DEVICEID:VOLTAGE:CURRENT:POWER:LOADSTATUS}
-            if len(parts) >= 6:
+            if len(parts) < 6:
                 voltage1 = float(parts[2])
                 current1 = float(parts[3])
                 power1 = float(parts[4])
@@ -334,6 +334,78 @@ def btb4channel():
         "device_data": device_data
     })
 
+# Single Phase code 
+@app.route('/singlephase', methods=['POST', 'GET'])
+def singlephase():
+
+    user_name = request.args.get('user_name')
+    company_name = request.args.get('company_name')
+
+    print("User Name:", user_name, "--> Company Name:", company_name)
+
+    conn = connect_db()
+    cursor = conn.cursor(dictionary=True)
+
+    # 1️⃣ Get all Single Phase devices for this user/company
+    cursor.execute("""
+        SELECT serial_number
+        FROM product_details
+        WHERE company_name = %s
+        AND product_type = 'Single_Phase'
+        AND FIND_IN_SET(%s, REPLACE(user_access, ' ', ''))
+    """, (company_name, user_name))
+
+    devices = [row['serial_number'] for row in cursor.fetchall()]
+    print("Single Phase Devices:", devices)
+
+    if not devices:
+        return jsonify({"status": "no devices", "data": {}})
+
+    device_data = {}
+
+    # 2️⃣ Get latest row from phase_data for each device
+    for device_name in devices:
+
+        cursor.execute("""
+            SELECT *
+            FROM phase_data
+            WHERE device_id = %s
+            ORDER BY created_at DESC, id DESC
+            LIMIT 1
+        """, (device_name,))
+
+        last_record = cursor.fetchone()
+
+        if last_record:
+            device_data[device_name] = last_record
+        else:
+            device_data[device_name] = {"device_id": device_name, "message": "no data"}
+
+    # 3️⃣ Fetch online/offline status
+    format_strings = ','.join(['%s'] * len(devices))
+
+    cursor.execute(f"""
+        SELECT device_id, device_status
+        FROM device_status
+        WHERE device_id IN ({format_strings})
+    """, tuple(devices))
+
+    status_rows = cursor.fetchall()
+    device_status = {row['device_id']: row['device_status'] for row in status_rows}
+
+    # 4️⃣ Merge status with device_data
+    for device in devices:
+        device_data[device]['status'] = device_status.get(device, 'offline')
+
+    cursor.close()
+    conn.close()
+
+    # 5️⃣ Send JSON response
+    return jsonify({
+        "status": "success",
+        "device_data": device_data
+    })
+
 
 # ============================================================
 @app.route("/handle_on_off", methods=["POST"])
@@ -386,7 +458,6 @@ def handle_on_off():
 
 
             if device_type == "BTB4Channel":
-            # Get last row id
                 cursor.execute("""
                     SELECT id FROM phase_data
                     WHERE device_id = %s
@@ -416,6 +487,28 @@ def handle_on_off():
                     conn.commit()
                     logging.info(f"✅ Updated phase_data last row for {device_name}")
 
+            elif device_type == "Single_Phase":
+                cursor.execute("""
+                    SELECT id FROM phase_data
+                    WHERE device_id = %s
+                    ORDER BY created_at DESC, id DESC
+                    LIMIT 1
+                """, (device_name,))
+                
+                last = cursor.fetchone()
+
+                if last:
+                    last_id = last[0]
+                    cursor.execute("""
+                        UPDATE phase_data
+                        SET relay1 = %s
+                        WHERE id = %s
+                    """, (db_intensity, last_id))
+                    conn.commit()
+                    logging.info(f"✅ Database updated - relay1={db_intensity} for device {device_name}")
+                else:
+                    logging.warning(f"⚠️ No existing record found for {device_name}")
+
         except Exception as e:
             logging.error(f"❌ MQTT Publish failed: {e}")
             return jsonify({"error": f"MQTT Publish failed: {e}"}), 500
@@ -427,115 +520,6 @@ def handle_on_off():
         return jsonify({"error": str(e)}), 500
     finally:
         conn.close()
-
-
-
-@socketio.on('single_phase_graph_data')
-def single_phase_graph_data(data):
-    try:
-        print("Selected Data for single-phase graph:", data)
-        start_date = data.get('startDate')
-        end_date = data.get('endDate')
-        timeselect = data.get('timeSelect')  # "today" or "range"
-        graph_type = data.get('graphSelect')  # "power", "voltage", "current"
-        print('graph_type-------------', graph_type, 'timeselect----------', timeselect)
-
-        conn = connect_db()
-        cursor = conn.cursor()
-
-        # Map selected graph type to actual database column
-        column_map = {
-            'power': 'power1',
-            'voltage': 'voltage1',
-            'current': 'current1'
-        }
-        selected_column = column_map.get(graph_type, 'power1')  # default to power
-
-        # ✅ Fetch all device_ids with device_type = 'Single_Phase'
-        cursor.execute("SELECT DISTINCT device_id FROM phase_data WHERE device_type = 'Single_Phase'")
-        device_ids = [row[0] for row in cursor.fetchall()]
-
-        if not device_ids:
-            print("⚠️ No devices found with device_type = 'Single_Phase'")
-            socketio.emit('single_phase_graph_data_response', [], room=request.sid)
-            return
-
-        # Prepare placeholders for dynamic IN clause
-        placeholders = ', '.join(['?'] * len(device_ids))
-
-        if timeselect == "today" or (start_date == end_date and timeselect == "range"):
-            # 🕒 Daily query (hourly averages for one or more devices)
-            query = f"""
-                WITH r AS (
-                    SELECT 
-                        CAST(strftime('%H', created_at) AS INTEGER) AS hour,
-                        DATE(created_at) AS date,
-                        ROUND(AVG({selected_column}), 2) AS avg_value
-                    FROM 
-                        phase_data
-                    WHERE 
-                        DATE(created_at) BETWEEN ? AND ?
-                        AND device_id IN ({placeholders})
-                    GROUP BY 
-                        DATE(created_at), strftime('%H', created_at)
-                )
-                SELECT 
-                    r.hour AS hour, 
-                    ROUND(AVG(r.avg_value), 2) AS value
-                FROM 
-                    r
-                GROUP BY 
-                    r.hour
-                ORDER BY 
-                    r.hour;
-            """
-            params = [start_date, end_date] + device_ids
-            cursor.execute(query, params)
-            results = cursor.fetchall()
-            response_data = [{'hour': int(row[0]), 'value': float(row[1])} for row in results]
-
-        elif timeselect == "range" and start_date != end_date:
-            # 📅 Range query (daily averages for multiple devices)
-            query = f"""
-                WITH r AS (
-                    SELECT 
-                        DATE(created_at) AS date,
-                        ROUND(AVG({selected_column}), 2) AS avg_value
-                    FROM 
-                        phase_data
-                    WHERE 
-                        DATE(created_at) BETWEEN ? AND ?
-                        AND device_id IN ({placeholders})
-                    GROUP BY 
-                        DATE(created_at)
-                )
-                SELECT 
-                    r.date AS date, 
-                    ROUND(AVG(r.avg_value), 2) AS value
-                FROM 
-                    r
-                GROUP BY 
-                    r.date
-                ORDER BY 
-                    r.date ASC;
-            """
-            params = [start_date, end_date] + device_ids
-            cursor.execute(query, params)
-            results = cursor.fetchall()
-            response_data = [{'date': str(row[0]), 'value': float(row[1])} for row in results]
-
-        else:
-            response_data = []
-
-        cursor.close()
-        conn.close()
-
-        socketio.emit('single_phase_graph_data_response', response_data, room=request.sid)
-        print('socket_response', response_data)
-
-    except Exception as e:
-        print("Error in single_phase_graph_data:", e)
-        socketio.emit('single_phase_graph_data_response', {'error': str(e)}, room=request.sid)
 
 @app.route("/fourchannel_graph", methods=["POST"])
 def fourchannel_graph():
@@ -651,6 +635,132 @@ def fourchannel_graph():
 
     except Exception as e:
         print("❌ Error in microservice:", e)
+        return jsonify({
+            "status": "error",
+            "message": str(e)
+        }), 500
+
+@app.route("/singlephase_graph", methods=["POST"])
+def singlephase_graph():
+    try:
+        data = request.get_json(force=True)
+        print("[MICRO-SERVICE] Received payload:", data)
+
+        # ---------------------------
+        # Validate required fields
+        # ---------------------------
+        required_keys = ["device_id", "start_date", "end_date", "graph_type", "time_select"]
+        missing = [k for k in required_keys if not data.get(k)]
+
+        if missing:
+            return jsonify({
+                "status": "error",
+                "message": f"Missing required fields: {', '.join(missing)}"
+            }), 400
+
+        device_id = data["device_id"]
+        start_date = data["start_date"]
+        end_date = data["end_date"]
+        graph_type = data["graph_type"]
+        time_select = data["time_select"]
+
+        print("graph_type =", graph_type, ":: time_select =", time_select)
+
+        # ---------------------------
+        # MySQL DB Connection
+        # ---------------------------
+        conn = connect_db()
+        cursor = conn.cursor(dictionary=True)
+
+        # ---------------------------
+        # Column mapping (Single Phase)
+        # ---------------------------
+        column_map = {
+            "power": "power1",
+            "voltage": "voltage1",
+            "current": "current1"
+        }
+        selected_column = column_map.get(graph_type, "power1")
+
+        # ---------------------------
+        # Fetch all Single Phase devices
+        # ---------------------------
+        cursor.execute(
+            "SELECT DISTINCT device_id FROM phase_data WHERE device_type = 'Single_Phase'"
+        )
+        device_ids = [row["device_id"] for row in cursor.fetchall()]
+
+        if not device_ids:
+            return jsonify({"status": "success", "graph_data": []})
+
+        placeholders = ", ".join(["%s"] * len(device_ids))
+
+        # ---------------------------
+        # TODAY or same start/end
+        # ---------------------------
+        if time_select == "today" or (time_select == "range" and start_date == end_date):
+
+            query = f"""
+                SELECT 
+                    HOUR(created_at) AS hour,
+                    ROUND(AVG({selected_column}), 2) AS value
+                FROM phase_data
+                WHERE DATE(created_at) BETWEEN %s AND %s
+                  AND device_id IN ({placeholders})
+                GROUP BY HOUR(created_at)
+                ORDER BY hour ASC;
+            """
+
+            params = [start_date, end_date] + device_ids
+            cursor.execute(query, params)
+            results = cursor.fetchall()
+
+            response_data = [
+                {"hour": int(row["hour"]), "value": float(row["value"])}
+                for row in results
+            ]
+
+        # ---------------------------
+        # DATE RANGE (multiple days)
+        # ---------------------------
+        elif time_select == "range" and start_date != end_date:
+
+            query = f"""
+                SELECT 
+                    DATE(created_at) AS date,
+                    ROUND(AVG({selected_column}), 2) AS value
+                FROM phase_data
+                WHERE DATE(created_at) BETWEEN %s AND %s
+                  AND device_id IN ({placeholders})
+                GROUP BY DATE(created_at)
+                ORDER BY date ASC;
+            """
+
+            params = [start_date, end_date] + device_ids
+            cursor.execute(query, params)
+            results = cursor.fetchall()
+
+            response_data = [
+                {"date": str(row["date"]), "value": float(row["value"])}
+                for row in results
+            ]
+
+        else:
+            response_data = []
+
+        cursor.close()
+        conn.close()
+
+        # ---------------------------
+        # FINAL RETURN
+        # ---------------------------
+        return jsonify({
+            "status": "success",
+            "graph_data": response_data
+        })
+
+    except Exception as e:
+        print("❌ Error in single phase graph:", e)
         return jsonify({
             "status": "error",
             "message": str(e)

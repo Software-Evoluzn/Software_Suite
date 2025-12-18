@@ -5,7 +5,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Navbar</title>
-  <link rel="stylesheet" href="../static/css/navbar_backup.css" />
+  <link rel="stylesheet" href="../static/css/navbar.css" />
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css"
     integrity="sha512-SnH5WK+bZxgPHs44uWIX+LLJAJ9/2PkPKZ5QiAj6Ta86w+fsb2TkcmfRyVX3pBnMFcV7oQPJkl9QevSCWr3W6A=="
     crossorigin="anonymous" referrerpolicy="no-referrer" />
@@ -124,6 +124,28 @@
         </div>
         <div class="sidebar_dashboard_title dashboard_title_dashboard" style="display: flex; justify-content: center;">
           BTB 4Channel
+        </div>
+      </a>
+      {% endif %}
+
+      {% if 'Single_Phase' in products %}
+      <a class="sidebar-link {% if active_page == 'temperature' %}active{% endif %}" href="/singlephase">
+        <div class="sidebar_dashboard_icon">
+          <i class="fa-solid fa-temperature-half" style="font-size: 25px;"></i>
+        </div>
+        <div class="sidebar_dashboard_title dashboard_title_dashboard" style="display: flex; justify-content: center;">
+          Single Phase
+        </div>
+      </a>
+      {% endif %}
+
+      {% if 'IntelliZENS Lora' in products %}
+      <a class="sidebar-link {% if active_page == 'temperature' %}active{% endif %}" href="/intellizens_lora">
+        <div class="sidebar_dashboard_icon">
+          <i class="fa-solid fa-temperature-half" style="font-size: 25px;"></i>
+        </div>
+        <div class="sidebar_dashboard_title dashboard_title_dashboard" style="display: flex; justify-content: center;">
+          Lora Intellizens
         </div>
       </a>
       {% endif %}

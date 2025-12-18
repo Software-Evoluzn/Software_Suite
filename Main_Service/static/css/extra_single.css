@@ -1,0 +1,186 @@
+/* ===== Global Reset ===== */
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+    font-family: Arial, sans-serif;
+}
+
+body {
+    background: #f4f6fb;
+    display: flex;
+    justify-content: center;
+    padding: 20px;
+}
+
+/* ===== Dashboard Container ===== */
+.dashboard-box {
+    width: 100%;
+    max-width: 1250px;
+    background: #ffffff;
+    border-radius: 16px;
+    border: 1px solid #ddd;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.08);
+    position: relative;
+    padding-bottom: 25px;
+
+    /* 👇 Center align */
+    margin: 40px auto;
+}
+
+/* ===== Section Header ===== */
+.section-title {
+    background: #eef5ff;
+    color: #484bce;
+    font-size: 22px;
+    font-weight: 700;
+    padding: 12px 24px;
+    border-radius: 16px 0 16px 0;
+    display: inline-block;
+}
+
+/* ===== Master Switch ===== */
+.nav-icon {
+    position: absolute;
+    top: 18px;
+    right: 18px;
+}
+
+.switch {
+    position: relative;
+    width: 70px;
+    height: 34px;
+    display: inline-block;
+}
+
+.switch input {
+    display: none;
+}
+
+.slider {
+    position: absolute;
+    inset: 0;
+    background: #ccc;
+    border-radius: 40px;
+    cursor: pointer;
+    transition: 0.3s;
+}
+
+.slider::before {
+    content: "";
+    position: absolute;
+    width: 26px;
+    height: 26px;
+    left: 4px;
+    bottom: 4px;
+    background: #fff;
+    border-radius: 50%;
+    transition: 0.3s;
+}
+
+.switch input:checked + .slider {
+    background: #4B74FE;
+}
+
+.switch input:checked + .slider::before {
+    transform: translateX(36px);
+}
+
+.switch-labels {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 6px;
+    font-size: 10px;
+    color: #777;
+}
+
+/* ===== Card Body ===== */
+.card {
+    padding: 20px;
+    margin-top: 30px;
+}
+
+/* ===== Filters ===== */
+.filter-group {
+    display: flex;
+    justify-content: flex-end;
+    gap: 12px;
+    margin-bottom: 15px;
+}
+
+.filter-select {
+    background: #eaf0ff;
+    border: none;
+    border-radius: 6px;
+    padding: 8px 14px;
+    font-size: 14px;
+    cursor: pointer;
+}
+
+.filter-select:hover {
+    background: #dce6ff;
+}
+
+/* ===== Date Range ===== */
+.date-range-container {
+    display: none;
+    margin: 10px 0 20px 5px;
+}
+
+.date-input {
+    padding: 8px 10px;
+    border: 1px solid #ccc;
+    border-radius: 6px;
+}
+
+.btn-apply {
+    background: #4B74FE;
+    color: #fff;
+    border: none;
+    padding: 8px 18px;
+    border-radius: 6px;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.btn-apply:hover {
+    background: #345ae6;
+}
+
+/* ===== Chart ===== */
+.chart-container {
+    width: 100%;
+    margin-top: 15px;
+}
+
+canvas {
+    width: 100% !important;
+    max-height: 350px;
+}
+
+/* ===== Responsive ===== */
+@media (max-width: 768px) {
+    .filter-group {
+        justify-content: center;
+        flex-wrap: wrap;
+    }
+
+    /* ===== Dashboard Container ===== */
+.dashboard-box {
+    width: 100%;
+    max-width: 750px;
+    background: #ffffff;
+    border-radius: 16px;
+    border: 1px solid #ddd;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.08);
+    position: relative;
+    padding-bottom: 25px;
+
+    /* 👇 Center align */
+    margin: 40px auto;
+}
+
+    .section-title {
+        font-size: 18px;
+    }
+}
