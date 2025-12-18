@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>BTB4Channel Dashboard</title>
+    <title>SinglePhase Dashboard</title>
     <link href="../static/css/bootstrap.css" rel="stylesheet" />
 
     <style>
@@ -77,13 +77,15 @@
 </head>
 
 <body>
+
+    <!-- Single Phase Code  -->
     <div id="sidebar-placeholder">
         {% include 'navbar.html' %}
     </div>
 
     <div class="main_content d-flex flex-column min-vh-100">
 
-        <!-- 4 Channel BTB Dashboard -->
+        <!-- Single Phase Card Dashboard -->
         <div class="btbcard" >
             <div id="device-container" class="d-flex flex-row flex-wrap p-4 gap-4">
 
@@ -119,7 +121,7 @@
                                 style="display: {% if status != 'online' %}inline{% else %}none{% endif %};">
 
                             <!-- Arrow Button -->
-                            <a href="{{ url_for('btb_graph', device_id=device_name) }}" class="arrow-btn">
+                             <a href="{{ url_for('single_graph', device_id=device_name) }}" class="arrow-btn">
                                 <svg viewBox="0 0 24 24" fill="none">
                                     <path d="M9 6l6 6-6 6" stroke="#3b82f6" stroke-width="2.3" stroke-linecap="round"
                                         stroke-linejoin="round" />

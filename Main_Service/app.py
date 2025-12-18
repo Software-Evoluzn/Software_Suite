@@ -28,15 +28,37 @@ app = Flask(__name__)
 CORS(app)
 socketio = SocketIO(app, cors_allowed_origins="*")
 
-# === SOCKET.IO CLIENT TO MICRO SERVICE ===
+SECRET_KEY = 'evoluzn@123'
+sid_to_email = {}
+
+# ======================= MicroService Connection Start ========================
 micro_client = socketio_client.Client()
 
-WTS_URL = 'http://192.168.1.25:5002'
-RUNNING_URL = 'http://192.168.1.19:5003'
-OFFICE_URL = 'http://192.168.1.19:5004'
-BTB_URL = 'http://192.168.1.25:5005'
+LMS_Lora_URL = 'http://192.168.1.25:5002'
+Measurement_Mqtt_URL = 'http://192.168.1.19:5003'
+Safety_Mqtt_URL = 'http://192.168.1.25:5004'
 
-SECRET_KEY = 'evoluzn@123'
+try:
+    micro_client.connect(LMS_Lora_URL)
+    print("Connected to LMS Lora service.")
+except ConnectionError as e:  # ✅ Use imported ConnectionError
+    print(f"[WARNING] Could not connect to LMS Lora service at {LMS_Lora_URL}: {e}")
+
+try:
+    micro_client.connect(Safety_Mqtt_URL)
+    print("Connected to WTS service.")
+except ConnectionError as e:  # ✅ Use imported ConnectionError
+    print(f"[WARNING] Could not connect to WTS service at {Safety_Mqtt_URL}: {e}")
+
+try:
+    micro_client.connect(Measurement_Mqtt_URL)
+    print("Connected to Running service.")
+except ConnectionError as e:  # ✅ Use imported ConnectionError
+    print(f"[WARNING] Could not connect to Running service at {Measurement_Mqtt_URL}: {e}")
+
+# ======================= MicroService Connection END ==========================
+
+
 
 # MySQL Database connection details
 db_config = {
@@ -165,6 +187,7 @@ def create_tables():
             warranty_period INT NOT NULL,  -- assuming this is in months; change if needed
             serial_number VARCHAR(100) NOT NULL UNIQUE,
             user_access VARCHAR(255) NOT NULL  ,
+            connection_type VARCHAR(50) NOT NULL DEFAULT 'mqtt',
             graph_duration INT DEFAULT 60,
             inserttimestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP                   
         );
@@ -193,6 +216,23 @@ def create_tables():
                 );
          """)
 
+
+    intellizens_table_query = ''' 
+        CREATE TABLE IF NOT EXISTS intellizens_data (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            master_id TEXT,
+            slave_id TEXT,
+            D1 TEXT,
+            D2 TEXT,
+            D3 TEXT,
+            D4 TEXT,
+            intensity INT DEFAULT 0,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+    '''
+
+    
+
     # ALTER TABLE alert_temp ADD UNIQUE unique_index (device_name, timestamp)
     conn.commit()
 
@@ -206,6 +246,7 @@ def create_tables():
         cursor.execute(pannel_table_query)
         cursor.execute(sensor_data_query)
         cursor.execute(btb4channel_query)
+        cursor.execute(intellizens_table_query)
         cursor.execute(product_query)
         cursor.execute(product_details_query)
         conn.commit()
@@ -338,28 +379,11 @@ def on_disconnect(client, userdata, rc):
         mqttc.reconnect()
 
 def on_message(client, userdata, message):
-    print(f"Received message on topic {message.topic}: {message.payload}")
+    # print(f"Received message on topic {message.topic}: {message.payload}")
     try:
-        print("on_message called")
         payload = message.payload.decode()
-        print("Decoded payload:", payload)
         topic = message.topic
-        conn = connect_db()
-        cursor = conn.cursor()
-        # Initialize all possible variables
-        device_type = None
-        device_id = None
-        device_status = None
-        auto_motion_status = None
-        intensity = None
-        power = None
-        temperature = None
-        auto_brightness_status = None
-        voltage = None
-        current = None
-        lux = None
-
-        current_time = datetime.now().strftime('%Y-%m-%d %H:%M:00')
+        # print("Decoded payload:", payload, topic)
 
         status = payload.replace("{", "").replace("}", "")
 
@@ -378,106 +402,6 @@ def on_message(client, userdata, message):
             else:
                 print("⚠️ Unknown status received, ignoring...")
                     
-
-
-        if "oeeStat" in topic:
-            current_time = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-            device_type = "oee"
-            payload_str = payload.strip("{}")
-            split_payload = payload_str.split(":")
-            if len(split_payload) >= 6:
-                device_id = split_payload[1]
-                voltage = split_payload[2]
-                current = split_payload[3]
-                power = split_payload[4]
-                device_status = split_payload[5]
-
-                if device_id and device_id != '300':
-                    query = """
-                        INSERT INTO oee_stats (device_name, voltage, current, power, deviceStatus, inserttimestamp)
-                        VALUES (%s, %s, %s, %s, %s, %s)
-                        ON DUPLICATE KEY UPDATE
-                            voltage = VALUES(voltage),
-                            current = VALUES(current),
-                            power = VALUES(power),
-                            deviceStatus = VALUES(deviceStatus)"""
-                    val = (device_id, voltage, current, power, device_status, current_time)
-                    cursor.execute(query, val)
-                    conn.commit()
-        else:
-            payload_str = payload.strip("{}")
-            print("payload_str:", payload_str)
-            split_payload = payload_str.split(":")
-            print("split_payload:", split_payload)
-
-            if device_type is None:
-                if "highbay" in topic:
-                    device_type = "highbay"
-                elif "plug" in topic:
-                    device_type = "plug"
-                elif "office" in topic:
-                    device_type = "office"
-                elif "tube" in topic:
-                    device_type = "tube"
-
-            if device_type == "highbay":
-                socketio.emit('highbay', split_payload)
-                if len(split_payload) >= 4:
-                    device_id = split_payload[1]
-                    device_status = split_payload[2]
-                    power = random.randint(80, 100) if int(device_status) >= 1 else 0
-                    auto_motion_status = split_payload[3]
-
-            elif device_type == "plug":            
-                socketio.emit('plug', split_payload)
-                if len(split_payload) >= 6:
-                    device_id = split_payload[1]
-                    voltage = split_payload[2]
-                    current = split_payload[3]
-                    power = split_payload[4]
-                    device_status = split_payload[5]                           
-            elif device_type in ["office", "tube"]:                                  
-                if len(split_payload) >= 8:
-                    device_id = split_payload[1]
-                    intensity = split_payload[2]
-                    device_status = split_payload[3]
-                    temperature = split_payload[5]
-                    auto_brightness_status = split_payload[6]
-                    auto_motion_status = split_payload[7]
-
-                    if device_type == "office":
-                        power = 48 if int(device_status) == 1 else 0
-                    else:
-                        # power = split_payload[4]
-                        lux = split_payload[8]
-                        lux_diff = 1100 - int(lux)
-                        print("lux_diff:", lux_diff)
-                        light_int = lux_diff/900
-                        print("light_int:", light_int)
-                        cal_power = 48 * light_int
-                        print("cal_power:", cal_power)
-                        # power = ((int(cal_power) + 9) // 10) * 10
-                        power = min(max(((cal_power - 1) // 5 + 1) * 5, 0), 48)
-                        print("power:", power)
-
-
-            if device_id and device_id != '300':
-                query = """
-                    INSERT INTO sensor_data (device_type, device_id, device_status, auto_motion_status, intensity, power, temperature, auto_brightness_status, voltage, current, inserttimestamp, lux) 
-                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
-                """
-                val = (device_type, device_id, device_status, auto_motion_status, intensity, power, temperature, auto_brightness_status, voltage, current, current_time, lux)
-                cursor.execute(query, val)
-                conn.commit()
-                print(f"Inserted data for device_id: {device_id}")
-            else:        
-                topic_without_status = topic.split("/")[0]
-                payload_with_topic = payload_str + ":" + topic_without_status
-                                                                
-                if device_type in ["highbay", "plug", "office"] or topic.startswith("tube"):
-                    print("Sending data to emit")
-                    socketio.emit(device_type, payload_with_topic)
-
     except Exception as e:
         e
         print(f"Error: {e}")
@@ -757,14 +681,15 @@ def add_admin():
 
         # --- Step 2: Insert into product_details ---
         product_insert_query = """
-            INSERT INTO product_details (company_name, product_type, date_of_purchase, warranty_period, serial_number, user_access)
-            VALUES (%s, %s, %s, %s, %s, %s)
+            INSERT INTO product_details (company_name, product_type, date_of_purchase, warranty_period, serial_number, user_access, connection_type)
+            VALUES (%s, %s, %s, %s, %s, %s, %s)
         """
 
         for product in product_data:
             product_type = product.get('product_type')
             date_of_purchase = product.get('date_of_purchase')
             warranty_period = product.get('warranty_period')
+            connection_type = product.get('connection_type')
             serials = product.get('serials', [])
 
             for serial in serials:
@@ -783,7 +708,9 @@ def add_admin():
                         date_of_purchase,
                         int(warranty_period),
                         serial_number,
-                        user_access_str
+                        user_access_str,
+                        connection_type,
+                        
                     ))
                     # print("product----->" ,product_type)
                   
@@ -899,14 +826,6 @@ def inject_user_products():
     }
 
 
-# @app.route('/home')
-# def home():
-#     result = get_user_name_from_token()
-#     print("wtstempsync page", result)
-#     name = result.get('company_name', 'Guest')
-#     print("Company name:", name)
-#     return render_template('main_dashboard.html', name=name)
-
 @app.route('/home')
 def home():
     result = get_user_name_from_token()
@@ -1015,12 +934,6 @@ def product_dashboard():
 
 
 # ======================= MicroService For Office Light  START ========================
-try:
-    micro_client.connect(OFFICE_URL)
-    print("Connected to Office service.")
-except ConnectionError as e:  # ✅ Use imported ConnectionError
-    print(f"[WARNING] Could not connect to Office service at {OFFICE_URL}: {e}")
-
 def get_product_list_of_user(name, company_name):
     conn = connect_db()
     cursor = conn.cursor()
@@ -1504,15 +1417,6 @@ def intensity_office_individual():
 
 
 # ======================= WTS Microservice Integration START =======================
-
-sid_to_email = {}
-
-try:
-    micro_client.connect(WTS_URL)
-    print("Connected to WTS service.")
-except ConnectionError as e:  # ✅ Use imported ConnectionError
-    print(f"[WARNING] Could not connect to WTS service at {WTS_URL}: {e}")
-
 @app.route('/wtstempsync')
 def wtstempsync():
     result = get_user_name_from_token()
@@ -1523,7 +1427,7 @@ def wtstempsync():
 
     # Make request to microservice
     try:
-        response = requests.get(f'{WTS_URL}/wts_home', params={'email': email})
+        response = requests.get(f'{Safety_Mqtt_URL}/wts_home', params={'email': email})
         print("Response from microservice:", response)
         micro_data = response.json()
         print("Response micro_data microservice:", micro_data)
@@ -1560,7 +1464,7 @@ def update_panel():
 
         try:
             # Forward the request to the microservice
-            response = requests.post(f'{WTS_URL}/update_panel', json=data)
+            response = requests.post(f'{Safety_Mqtt_URL}/update_panel', json=data)
 
             # Check if microservice responded successfully
             if response.status_code == 200:
@@ -1594,7 +1498,7 @@ def temperature(device_id):
 
     # Make request to microservice
     try:
-        response = requests.get(f'{WTS_URL}/graph_page', params={'device_id': device_id})
+        response = requests.get(f'{Safety_Mqtt_URL}/graph_page', params={'device_id': device_id})
         micro_data = response.json()
 
         print("micro_data Data-->", micro_data)
@@ -1625,7 +1529,7 @@ def publish_threshold():
 
     try:
         # Forward the request to the Micro_Service
-        response = requests.post(f'{WTS_URL}/micro_publish', json=data)
+        response = requests.post(f'{Safety_Mqtt_URL}/micro_publish', json=data)
 
         # Return the response from microservice to frontend
         return jsonify(response.json()), response.status_code
@@ -1641,7 +1545,7 @@ def delete_alert():
 
     try:
         # Forward the request to the Micro_Service
-        response = requests.post(f'{WTS_URL}/delete_alert', json=data)
+        response = requests.post(f'{Safety_Mqtt_URL}/delete_alert', json=data)
         print("Forwarded to microservice, response:", response.text)
 
         # Return the response from microservice to frontend
@@ -1707,12 +1611,6 @@ def disconnect():
 
 
 # ======================= MicroService For BTB 4Channel  START ========================
-try:
-    micro_client.connect(BTB_URL)
-    print("Connected to BTB service.")
-except ConnectionError as e:  # ✅ Use imported ConnectionError
-    print(f"[WARNING] Could not connect to BTB service at {BTB_URL}: {e}")
-
 @app.route('/btb4channel')
 def btb4channel():
     result = get_user_name_from_token()
@@ -1721,7 +1619,7 @@ def btb4channel():
     user_name = result.get('username')
 
     try:
-        response = requests.get(f'{BTB_URL}/btb4channel', params={'user_name': user_name, 'company_name': name})
+        response = requests.get(f'{Safety_Mqtt_URL}/btb4channel', params={'user_name': user_name, 'company_name': name})
         print("Response from microservice:", response)
         micro_data = response.json()
         print("Response micro_data microservice:", micro_data)
@@ -1739,36 +1637,33 @@ def btb4channel():
         print(f"Request to microservice failed: {e}")
         return jsonify({'message': 'Failed to connect to microservice'}), 500
 
-
 @socketio.on("toggle_device")
 def toggle_device(data):
     device_id = data["device"]
     intensity = data["intensity"]
 
     print(f"Toggling device {device_id}, intensity {intensity}")
-
-    # Step 1: Find which device microservice to call
-    response = requests.post(f'{BTB_URL}/handle_on_off',json={
-        "device": f"BTB4Channel:{device_id}",
-        "intensity": intensity
-    })
-    print("Response from BTB microservice:", response.json())
-    return {"status": "OK"}
-
+    try:
+        # Step 1: Find which device microservice to call
+        response = requests.post(f'{Safety_Mqtt_URL}/handle_on_off',json={
+            "device": f"BTB4Channel:{device_id}",
+            "intensity": intensity
+        })
+        print("Response from BTB microservice:", response.json())
+        return {"status": "OK"}
+    except Exception as e:
+        print(f"Error calling Single Phase microservice: {e}")
+        return {"status": "ERROR", "message": str(e)}
 
 @app.route('/btb_graph', methods=['GET'])
 def btb_graph():
     result = get_user_name_from_token()
     email = result.get('email')
     name = result.get('company_name')
-
-    result = get_user_name_from_token()
-    email = result.get('email')
-    name = result.get('company_name')
     user_name = result.get('username')
     
     try:
-        response = requests.get(f'{BTB_URL}/btb4channel', params={'user_name': user_name, 'company_name': name})
+        response = requests.get(f'{Safety_Mqtt_URL}/btb4channel', params={'user_name': user_name, 'company_name': name})
         print("Response from microservice:", response)
         micro_data = response.json()
         print("Response micro_data microservice:", micro_data)
@@ -1782,9 +1677,6 @@ def btb_graph():
     except requests.exceptions.RequestException as e:
         print(f"Request to microservice failed: {e}")
         return jsonify({'message': 'Failed to connect to microservice'}), 500
-
-    return render_template('btb_graph.html', name=name)
-
 
 @socketio.on('fourchannelBTB_graph_data')
 def fourchannelBTB_graph_data(data):
@@ -1803,7 +1695,7 @@ def fourchannelBTB_graph_data(data):
             return
 
         # Gateway → Microservice call
-        microservice_url = f"{BTB_URL}/fourchannel_graph"
+        microservice_url = f"{Safety_Mqtt_URL}/fourchannel_graph"
 
         payload = {
             "device_id": device_id,
@@ -1839,21 +1731,276 @@ def fourchannelBTB_graph_data(data):
                       {'error': str(e)}, room=request.sid)
 
 
+# ======================= MicroService For BTB 4Channel  END ========================
+
+# ======================= MicroService For Single Phase  START ======================
+@app.route('/singlephase')
+def singlephase():
+    # 🔐 Get user data from JWT token
+    result = get_user_name_from_token()
+    email = result.get('email')
+    company_name = result.get('company_name')
+    user_name = result.get('username')
+
+    print("---- Single Phase Page Request ----")
+    print("User:", user_name, "Company:", company_name)
+
+    try:
+        # 🌐 Call microservice endpoint
+        response = requests.get(
+            f'{Safety_Mqtt_URL}/singlephase',
+            params={
+                'user_name': user_name,
+                'company_name': company_name
+            }
+        )
+
+        print("Microservice Response:", response.status_code)
+        micro_data = response.json()
+        print("Microservice Data:", micro_data)
+
+        if micro_data.get('status') != 'success':
+            return jsonify({'message': 'Error fetching single phase data'}), 500
+
+        # 🖼 Render GUI page
+        return render_template(
+            'singlephase.html',
+            name=company_name,
+            device_data=micro_data['device_data']
+        )
+
+    except requests.exceptions.RequestException as e:
+        print(f"Request to microservice failed: {e}")
+        return jsonify({'message': 'Failed to connect to microservice'}), 500
+
+@socketio.on("toggle_device_single")
+def toggle_device_single(data):
+    device_id = data["device"]        # example: plugF0C00B
+    intensity = data["intensity"]     # example: 0 or 100
+   
+    print(f"Toggling device {device_id}, intensity {intensity}")
+    
+    try:
+        # Step 1: Find which device microservice to call
+        response = requests.post(f'{Safety_Mqtt_URL}/handle_on_off',json={
+            "device": f"Single_Phase:{device_id}",
+            "intensity": intensity
+        })
+        print("Response from BTB microservice:", response.json())
+        return {"status": "OK"}
+
+
+    except Exception as e:
+        print(f"Error calling Single Phase microservice: {e}")
+        return {"status": "ERROR", "message": str(e)}
+
+# single phase dashboard togle wagre dekhne ke liye
+@app.route('/single_graph', methods=['GET'])
+def single_graph():
+    result = get_user_name_from_token()
+    email = result.get('email')
+    name = result.get('company_name')
+    user_name = result.get('username')
+
+    print("here coomes")
+    
+    try:
+        response = requests.get(f'{Safety_Mqtt_URL}/singlephase', params={'user_name': user_name, 'company_name': name})
+        print("Response from microservice:", response)
+        micro_data = response.json()
+        print("Response micro_data microservice:", micro_data)
+
+        if micro_data.get('status') != 'success':
+            return jsonify({'message': 'Error fetching device data'}), 500
+    
+        return render_template('single_graph.html', name=name,
+            device_data=micro_data['device_data'])
+    
+    except requests.exceptions.RequestException as e:
+        print(f"Request to microservice failed: {e}")
+        return jsonify({'message': 'Failed to connect to microservice'}), 500
+
+# graph single phase kaaaa
+@socketio.on('single_graph_data')
+def single_graph_data(data):
+    try:
+        print("Received graph request:", data)
+
+        device_id = data.get('device_id')
+        start_date = data.get('startDate')
+        end_date = data.get('endDate')
+        graph_type = data.get('graphSelect')
+        time_select = data.get('timeSelect')
+
+        if not device_id:
+            socketio.emit('single_graph_data_response',
+                          {'error': 'Missing device_id'}, room=request.sid)
+            return
+
+        # Gateway → Microservice call
+        microservice_url = f"{Safety_Mqtt_URL}/singlephase_graph"
+
+        payload = {
+            "device_id": device_id,
+            "start_date": start_date,
+            "end_date": end_date,
+            "graph_type": graph_type,
+            "time_select": time_select
+        }
+
+        print("Forwarding to microservice:", payload)
+
+        response = requests.post(microservice_url, json=payload)
+        micro_data = response.json()
+
+        print("Microservice Response:", micro_data)
+
+        # If microservice error
+        if micro_data.get("status") != "success":
+            socketio.emit('single_graph_data_response',
+                          {'error': 'Microservice error'}, room=request.sid)
+            return
+
+        # Success → send graph data to frontend
+        socketio.emit(
+            'single_graph_data_response',
+            micro_data.get("graph_data", []),
+            room=request.sid
+        )
+
+    except Exception as e:
+        print("Gateway Socket Error:", e)
+        socketio.emit('single_graph_data_response',
+                      {'error': str(e)}, room=request.sid)
+# ======================= MicroService For Single Phase End ======================
 
 # ======================= MicroService For Running Light  START ========================
-try:
-    micro_client.connect(RUNNING_URL)
-    print("Connected to Running service.")
-except ConnectionError as e:  # ✅ Use imported ConnectionError
-    print(f"[WARNING] Could not connect to Running service at {RUNNING_URL}: {e}")
-
-
-
 @app.route('/running_light', methods=['GET', 'POST'])
 def running_light():
     return render_template('running_light.html')
 
 # ======================= MicroService For Running Light END ========================
+
+# ======================= Intellizens Microservice Integration Start =======================
+@app.route('/intellizens_lora', methods=['GET'])
+def intellizens_lora():
+    conn = connect_db()
+    cursor = conn.cursor(dictionary=True)
+
+    # 1️⃣ Fetch IntelliZENS LoRa products
+    cursor.execute("""
+        SELECT serial_number, company_name
+        FROM product_details
+        WHERE product_type = 'IntelliZENS Lora'
+    """)
+    products = cursor.fetchall()
+
+    intellizens_data = {}  # 🔥 FINAL STRUCTURE
+
+    for product in products:
+        serial = product["serial_number"]  # e.g. "T:04:06"
+
+        # 2️⃣ Extract master & slave IDs
+        try:
+            _, master_id, slave_id = serial.split(":")
+        except ValueError:
+            continue  # skip invalid serials
+
+        # 3️⃣ Fetch latest device state
+        cursor.execute("""
+            SELECT D1, D2, D3, D4
+            FROM intellizens_data
+            WHERE master_id=%s AND slave_id=%s
+            ORDER BY created_at DESC
+            LIMIT 1
+        """, (master_id, slave_id))
+
+        row = cursor.fetchone()
+
+        # 4️⃣ If no data found, default OFF
+        if not row:
+            intellizens_data[serial] = {
+                "D1": 0,
+                "D2": 0,
+                "D3": 0,
+                "D4": 0
+            }
+            continue
+
+        # 5️⃣ Build required structure
+        intellizens_data[serial] = {
+            "D1": int(row["D1"]),
+            "D2": int(row["D2"]),
+            "D3": int(row["D3"]),
+            "D4": int(row["D4"])
+        }
+
+        print("rows-->", row, master_id, slave_id)
+
+    cursor.close()
+    conn.close()
+
+    # 6️⃣ Send to template or API
+    return render_template(
+        "Intellizens.html",
+        intellizens_data=intellizens_data
+    )
+
+
+@socketio.on("intellizens_control")
+def intellizens_control(data):
+    try:
+        master_id = data.get("master_id")
+        slave_id = data.get("slave_id")
+        light = data.get("light")
+        intensity = int(data.get("intensity", 0))
+
+        print(f"🔘 UI CMD → {master_id}:{slave_id} | {light} | {intensity}")
+
+        payload = {
+            "master_id": master_id,
+            "slave_id": slave_id,
+            "light": light,
+            "intensity": intensity
+        }
+
+        response = requests.post(
+            f"{LMS_Lora_URL}/lora_set_intensity",
+            json=payload,
+            timeout=5
+        )
+
+        if response.status_code != 200:
+            raise RuntimeError(response.text)
+
+        micro_data = response.json()
+
+        if micro_data.get("status") != "success":
+            raise RuntimeError(micro_data)
+
+        print("✅ Microservice ACK:", micro_data)
+
+        socketio.emit(
+            "intellizens_ack",
+            {
+                "serial": f"T:{master_id}:{slave_id}",
+                "light": light,
+                "intensity": intensity
+            },
+            room=request.sid
+        )
+
+        return {"status": "OK"}
+
+    except Exception as e:
+        print("❌ Control error:", e)
+        socketio.emit(
+            "intellizens_error",
+            {"error": str(e)},
+            room=request.sid
+        )
+
+# ======================= Intellizens Microservice Integration End ======================
 
 # Route to handle favicon.ico requests and return a 404 response
 @app.route('/favicon.ico')

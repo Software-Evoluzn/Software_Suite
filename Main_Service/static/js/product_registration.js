@@ -16,9 +16,6 @@ document.addEventListener('DOMContentLoaded', function () {
     event.preventDefault();
     console.log("here comes the data");
     const companyName = companyNameInput.value.trim();
-    // const deviceName = deviceInput.value.trim();
-    // const deviceType = deviceTypeSelect.value;
-    // const deviceDuration = deviceduration.value;
 
     const deviceData = [];
 
@@ -29,6 +26,7 @@ document.addEventListener('DOMContentLoaded', function () {
       const productType = formBox.querySelector('select').value;
       const dateOfPurchase = formBox.querySelector('input[type="date"]').value;
       const warrantyPeriod = formBox.querySelector('input[placeholder^="e.g."]').value;
+      const communicationType = formBox.querySelector('.communication-type').value;
 
       const serials = [];
       const serialRows = formBox.querySelectorAll('.serial-row');
@@ -64,23 +62,11 @@ document.addEventListener('DOMContentLoaded', function () {
           product_type: productType,
           date_of_purchase: dateOfPurchase,
           warranty_period: warrantyPeriod,
+          connection_type: communicationType,
           serials: serials
         });
       }
     });
-
-
-    // if (deviceName) {
-    //   deviceData.push({ device_type: deviceType, device_name: deviceName });
-    // }
-
-    // deviceContainer.querySelectorAll('div.mt-2').forEach(deviceDiv => {
-    //   const select = deviceDiv.querySelector('select');
-    //   const input = deviceDiv.querySelector('input');
-    //   if (select && input && input.value.trim()) {
-    //     deviceData.push({ device_type: select.value, device_name: input.value.trim() });
-    //   }
-    // });
 
     console.log("Company Name:", companyName);
     // console.log("Device Data:", deviceData);
@@ -159,6 +145,15 @@ document.addEventListener('DOMContentLoaded', function () {
             <label>Warranty Period</label>
             <input type="text" class="form-control form-control-sm" placeholder="e.g. 12 months">
           </div>
+
+          <div class="col-md-4">
+            <label>Communication</label>
+            <select class="form-select form-select-sm communication-type">
+              <option value="mqtt">MQTT</option>
+              <option value="lora">Lora</option>
+            </select>
+          </div>
+
         </div>
 
         <div class="mb-2">
