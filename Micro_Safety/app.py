@@ -240,7 +240,9 @@ def on_message(client, userdata, msg):
         # 3a. SINGLE-PHASE DEVICE
         # ----------------------------------------------------------------------
         if device_type == "Single_Phase":
-            if len(parts) < 6:
+            print("here come", parts, device_type)
+            if len(parts) >= 6:
+                print("here come-->", parts, device_type)
                 voltage1 = float(parts[2])
                 current1 = float(parts[3])
                 power1 = float(parts[4])
@@ -792,7 +794,6 @@ def dashboard():
 def home():
 
     user_email = request.args.get('email')
-
     print("Userr Name ",user_email)
     
     conn = connect_db()
@@ -825,15 +826,6 @@ def home():
             'result': result_data,
             'alerts': alerts
         })
-
-        # return jsonify({
-        #     'status': 'success',
-        #     'devices': filtered_devices,
-        #     'device_data': [safe_value(v) for v in received_data[0]],
-        #     'result': [safe_value(v) for v in received_data[1]],
-        #     'alerts': [{k: safe_value(v) for k, v in alert.items()} for alert in alerts]
-        # })
-
 
     except mysql.connector.Error as err:
         print(f"Error fetching data: {err}")
@@ -962,11 +954,11 @@ def graph_page():
 
         print("device_data for device:", device_data)
 
-    # return render_template('temperature_graph.html', device_id=device_id, device_data=device_data, alertsindivisual=alertsindivisual)
         return jsonify({
             'status': 'success',
             'device_id': device_id,
             'device_data': device_data,
+            'result': {},
             'alertsindivisual': alertsindivisual
         })
     
@@ -1328,34 +1320,58 @@ def handle_on_off():
     cursor = conn.cursor()
     
     try:
-        logging.info(f"🔌 On/Off Command - Device: {device}, Intensity: {intensity}")
+        # logging.info(f"🔌 On/Off Command - Device: {device}, Intensity: {intensity}")
 
-        # Split device_type and device_name if colon exists
-        if ":" in device:
-            device_type, device_name = device.split(":", 1)
-        else:
-            device_type = device
-            device_name = None
+        # # Split device_type and device_name if colon exists
+        # if ":" in device:
+        #     device_type, device_name = device.split(":", 1)
+        # else:
+        #     device_type = device
+        #     device_name = None
+
+        parts = device.split(":")
+
+        device_type = parts[0]          # BTB4Channel / Single_Phase
+        device_id = parts[1]            # F0BFD5 / plugF0C00B
+        relay_key = parts[2] if len(parts) > 2 else "ALL"
+
+        print("Device Type:", device_type)
+        print("Device ID:", device_id)
+        print("Relay Key:", relay_key)
 
         # Validate device_name
-        if not device_name:
-            return jsonify({"error": "Invalid device format"}), 400
+        # if not device_name:
+        #     return jsonify({"error": "Invalid device format"}), 400
 
         # Construct MQTT topic and payload
-        topic = f"{device_name}/control"
+        topic = f"{device_id}/control"
         payload = ""
 
         if device_type == "Single_Phase":
             payload = str(intensity)
+        # elif device_type == "BTB4Channel":
+        #     relay_mapping = {"BTB1": "Relay1", "BTB2": "Relay2", "BTB3": "Relay3", "BTB4": "Relay4"}
+        #     relay_key = device_name.split(":")[-1] 
+        #     relay_column = relay_mapping.get(relay_key, None)
+        #     relay_name = relay_mapping.get(relay_key, "RelayAll")
+        #     payload = f"{relay_name}:{intensity}"
+        # else:
+        #     return jsonify({"error": f"Unknown device type: {device_type}"}), 400
         elif device_type == "BTB4Channel":
-            relay_mapping = {"BTB1": "Relay1", "BTB2": "Relay2", "BTB3": "Relay3", "BTB4": "Relay4"}
-            relay_key = device_name.split(":")[-1] 
-            relay_column = relay_mapping.get(relay_key, None)
+            relay_mapping = {
+                "BTB1": "Relay1",
+                "BTB2": "Relay2",
+                "BTB3": "Relay3",
+                "BTB4": "Relay4",
+                "ALL": "RelayAll"
+            }
+
             relay_name = relay_mapping.get(relay_key, "RelayAll")
             payload = f"{relay_name}:{intensity}"
-        else:
-            return jsonify({"error": f"Unknown device type: {device_type}"}), 400
 
+        else:
+            return jsonify({"error": "Unknown device type"}), 400
+        
         logging.info(f"📡 Publishing MQTT → {topic} : {payload}")
 
         try:
@@ -1370,29 +1386,45 @@ def handle_on_off():
                     WHERE device_id = %s
                     ORDER BY created_at DESC, id DESC
                     LIMIT 1
-                """, (device_name,))
+                """, (device_id,))
                 last_row = cursor.fetchone()
                 if last_row:
+                    # last_id = last_row[0]
+
+                    # print("Last Row ID to update:", last_id, int(intensity))
+
+                    # if relay_column:
+                    #     # Update only one relay
+                    #     cursor.execute(f"""
+                    #         UPDATE phase_data
+                    #         SET {relay_column} = %s
+                    #         WHERE id = %s
+                    #     """, (db_intensity, last_id))
+                    # else:
+                    #     # Update all relays
+                    #     cursor.execute("""
+                    #         UPDATE phase_data
+                    #         SET relay1=%s, relay2=%s, relay3=%s, relay4=%s
+                    #         WHERE id=%s
+                    #     """, (db_intensity, db_intensity, db_intensity, db_intensity, last_id))
+                    # conn.commit()
                     last_id = last_row[0]
 
-                    print("Last Row ID to update:", last_id, int(intensity))
-
-                    if relay_column:
-                        # Update only one relay
-                        cursor.execute(f"""
-                            UPDATE phase_data
-                            SET {relay_column} = %s
-                            WHERE id = %s
-                        """, (db_intensity, last_id))
+                    if relay_key in ["BTB1", "BTB2", "BTB3", "BTB4"]:
+                        col = relay_mapping[relay_key].lower()
+                        cursor.execute(
+                            f"UPDATE phase_data SET {col}=%s WHERE id=%s",
+                            (db_intensity, last_id)
+                        )
                     else:
-                        # Update all relays
                         cursor.execute("""
                             UPDATE phase_data
                             SET relay1=%s, relay2=%s, relay3=%s, relay4=%s
                             WHERE id=%s
                         """, (db_intensity, db_intensity, db_intensity, db_intensity, last_id))
+
                     conn.commit()
-                    logging.info(f"✅ Updated phase_data last row for {device_name}")
+                    logging.info(f"✅ Updated phase_data last row for {device_id}")
 
             elif device_type == "Single_Phase":
                 cursor.execute("""
@@ -1400,7 +1432,7 @@ def handle_on_off():
                     WHERE device_id = %s
                     ORDER BY created_at DESC, id DESC
                     LIMIT 1
-                """, (device_name,))
+                """, (device_id,))
                 
                 last = cursor.fetchone()
 
@@ -1408,19 +1440,19 @@ def handle_on_off():
                     last_id = last[0]
                     cursor.execute("""
                         UPDATE phase_data
-                        SET relay1 = %s
+                        SET load_status = %s
                         WHERE id = %s
                     """, (db_intensity, last_id))
                     conn.commit()
-                    logging.info(f"✅ Database updated - relay1={db_intensity} for device {device_name}")
+                    logging.info(f"✅ Database updated - load_status={db_intensity} for device {device_id}")
                 else:
-                    logging.warning(f"⚠️ No existing record found for {device_name}")
+                    logging.warning(f"⚠️ No existing record found for {device_id}")
 
         except Exception as e:
             logging.error(f"❌ MQTT Publish failed: {e}")
             return jsonify({"error": f"MQTT Publish failed: {e}"}), 500
 
-        return jsonify({"status": "success", "device": device_name, "payload": payload})
+        return jsonify({"status": "success", "device": device_id, "payload": payload})
 
     except Exception as e:
         logging.error(f"❌ Error in handle_on_off: {e}")

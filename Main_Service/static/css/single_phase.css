@@ -1,0 +1,250 @@
+/* ===== RESET ===== */
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+    font-family: Arial, sans-serif;
+}
+
+body {
+    background-color: #F9F9F9;
+    overflow-x: hidden;
+}
+
+.main_content {
+    margin-left: 164px;
+    padding: 10px 15px;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+}
+
+@media (max-width: 768px) {
+    .main_content {
+        margin-left: 0;
+    }
+}
+
+/* ===== HEADER ===== */
+.power-header {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-left: 164px;
+    padding: 20px 30px;
+    background: #F9F9F9;
+    position: relative;
+    z-index: 5;
+}
+
+.header-left {
+    text-align: center;
+}
+
+.header-left h1 {
+    font-size: 28px;
+    font-weight: 700;
+    color: #0f172a;
+}
+
+.header-left p {
+    font-size: 14px;
+    color: #64748b;
+}
+
+.back-btn {
+    position: absolute;
+    left: 30px;
+    background: #fff;
+    padding: 8px 16px;
+    border-radius: 10px;
+    border: 1px solid #e5e7eb;
+    font-size: 14px;
+    color: #334155;
+    text-decoration: none;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.06);
+}
+
+@media (max-width: 768px) {
+    .power-header {
+        margin-left: 0;
+        padding: 15px;
+    }
+}
+
+/* ===== DASHBOARD ===== */
+.dashboard-box {
+    width: 100%;
+    display: flex;
+    margin: 15px auto;
+}
+
+.single-phase-wrapper {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    background: #ffffff;
+    border-radius: 20px;
+    padding: 24px;
+    margin: 15px;
+    box-shadow: 0 12px 30px rgba(0,0,0,0.08);
+}
+
+/* ===== MASTER SWITCH CARD ===== */
+.power-card {
+    display: flex;
+    background: #fff;
+     max-width: 560px;   /* full width issue bhi solve */
+    padding: 30px 30px;
+    border-radius: 18px;
+   justify-content: space-between;
+    align-items: center;
+    gap: 40px;        
+    box-shadow: 0 10px 25px rgba(0,0,0,0.08);
+    border: 1px solid #eef2f7;
+}
+
+.card-left {
+    display: flex;
+    align-items: center;
+    gap: 18px;
+}
+
+/* .power-icon {
+    width: 52px;
+    height: 52px;
+    border-radius: 50%;
+    background: #e5e7eb;
+    color: #10b981;
+    font-size: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: 0.3s;
+}
+
+/* ON STATE */
+.power-card:has(#singleMasterSwitch:checked) .power-icon {
+    background: #e6f9f0;
+} */
+
+/* TEXT */
+.power-card h2 {
+    font-size: 20px;
+    font-weight: 600;
+    color: #0f172a;
+}
+
+.status-text {
+    font-size: 14px;
+    color: #c1c3c5;
+}
+
+/* ON state */
+.power-card:has(#singleMasterSwitch:checked) .status-text {
+    color: #22c55e; /* green */
+}
+
+/* ===== MODERN SWITCH ===== */
+.modern-switch {
+    width: 72px;
+    height: 38px;
+    position: relative;
+}
+
+.modern-switch input {
+    display: none;
+}
+
+.switch-slider {
+    position: absolute;
+    inset: 0;
+    background: #d1d5db;
+    border-radius: 30px;
+    cursor: pointer;
+    transition: 0.3s;
+}
+
+.switch-slider::before {
+    content: "";
+    width: 32px;
+    height: 32px;
+    background: #fff;
+    border-radius: 50%;
+    position: absolute;
+    left: 3px;
+    bottom: 3px;
+    transition: 0.3s;
+}
+
+.modern-switch input:checked + .switch-slider {
+    background: #22c55e;
+}
+
+.modern-switch input:checked + .switch-slider::before {
+    transform: translateX(34px);
+}
+
+/* ===== FILTERS ===== */
+.filter-group {
+    display: flex;
+    gap: 12px;
+    padding: 20px;
+    flex-wrap: wrap;
+}
+
+.filter-select {
+    background: #eaf0ff;
+    border: none;
+    border-radius: 6px;
+    padding: 8px 14px;
+    cursor: pointer;
+}
+
+/* ===== DATE RANGE ===== */
+.date-range-container {
+    display: none;
+    margin: 10px 0 20px;
+    gap: 8px;
+    align-items: center;
+}
+
+.date-input {
+    padding: 8px;
+    border: 1px solid #ccc;
+    border-radius: 6px;
+}
+
+.btn-apply {
+    background: #4B74FE;
+    color: #fff;
+    border: none;
+    padding: 8px 18px;
+    border-radius: 6px;
+    cursor: pointer;
+}
+
+/* ===== CHART ===== */
+.chart-container {
+    width: 100%;
+    margin-top: 10px;
+    position: relative;
+    min-height: 260px;
+    padding: 30px;
+}
+
+.chart-container canvas {
+   width: 100% !important;
+    height: 100% !important;
+    max-height: 400px;
+    display: block;
+}
+
+#chartLabelText {
+    text-align: center;
+    margin-top: 15px;
+    font-weight: 600;
+    color: #444;
+}
+
+

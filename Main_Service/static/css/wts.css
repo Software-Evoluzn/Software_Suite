@@ -1,0 +1,155 @@
+@import url('../font/dm_sans_font.css');
+
+/* ================= GLOBAL ================= */
+body {
+    margin: 0;
+    padding: 0;
+    font-family: "DM Sans", sans-serif;
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+    background: #f4f7fe;
+}
+
+.main_content {
+    margin-left: 164px;
+}
+
+@media (max-width: 768px) {
+    .main_content {
+        margin-left: 0;
+    }
+}
+
+/* ================= COMMON ================= */
+.temperature_dashboard_title,
+.graph_main_heading {
+    color: #2B3674;
+    font-weight: 600;
+    font-size: 25px;
+    text-align: center;
+}
+
+.graph_main_heading {
+    text-align: left;
+}
+
+.evoluzn_logo {
+    height: 40px;
+}
+
+
+.temp_start_end_div {
+    background-color: #DFE6FF;
+    border-radius: 5px;
+    color: #2b3674;
+    font-weight: 600;
+    border: none;
+    padding: 5px 10px;
+}
+
+/* ================= EDIT PANEL ================= */
+.control_panel_edit {
+    display: none;
+    height: 40px;
+    padding: 5px;
+    font-size: 1.2em;
+    font-weight: bold;
+    color: #2B3674;
+    border-radius: 5px;
+    border: 1px solid #ccc;
+}
+
+.edit_name {
+    background: none;
+    border: none;
+}
+
+.apply_name {
+    border: none;
+    background-color: #2B3674;
+    color: #fff;
+    border-radius: 5px;
+    padding: 5px 10px;
+}
+
+/* ================= CARDS ================= */
+.temp_main_div,
+.main_graph_div,
+.temp_graph_level_indv_div {
+    background-color: #ffffff;
+    border-radius: 15px;
+}
+
+.temp_graph_level_indv_div {
+    padding: 15px;
+    box-shadow: 0px 4px 10px #EBEBEB;
+    border: 1px solid #474F7D;
+}
+
+/* ================= LUX GRID ================= */
+.temp_graph_level {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 40px;
+}
+
+.temp_graph_level_title_img_main_div {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.temp_graph_level_temp_value_div {
+    font-weight: 700;
+    font-size: 25px;
+    color: #2B3674;
+}
+
+/* ================= GRAPH ================= */
+.main_graph_div {
+    width: 100%;
+    overflow-x: auto;
+}
+
+.main_graph_div::-webkit-scrollbar {
+    height: 8px;
+}
+
+.main_graph_div::-webkit-scrollbar-thumb {
+    background-color: #90a5f1;
+    border-radius: 10px;
+}
+
+.main_canvas_wrapper {
+    width: 100%;
+}
+
+.main_graph_plot_div {
+    height: 350px;
+    width: 100%;
+}
+
+/* ================= DATE RANGE ================= */
+.dateRangeContainer_css_temp_r_y_b {
+    display: none;
+    flex-direction: column;
+    gap: 20px;
+}
+
+.temp_r_y_b_start_end_date_main_div {
+    display: flex;
+    gap: 10px;
+    color: #2B3674;
+    font-weight: 600;
+}
+
+/* ================= FOOTER ================= */
+footer {
+    font-size: 14px;
+    color: #474F7D;
+}
+
+footer span {
+    font-weight: 600;
+}

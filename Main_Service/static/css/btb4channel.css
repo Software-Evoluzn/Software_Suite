@@ -1,70 +1,130 @@
+/* ========== GLOBAL (page) ========== */
 * {
     box-sizing: border-box;
-    font-family: 'Arial', sans-serif;
     margin: 0;
     padding: 0;
+    font-family: "DM Sans", Arial, sans-serif;
 }
 
 body {
     margin: 0;
     padding: 0;
-    font-family: "DM Sans", sans-serif;
     background-color: #F9F9F9;
 }
 
+.dashboard-header {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: calc(100% - 164px);  /* Match main_content margin */
+    min-height: 60px;
+    padding: 15px 40px 15px 50px;
+    margin-left: 164px;         /* Align with main_content */
+    position: relative;
+    z-index: 10;
+    background: #F9F9F9;
+}
+
+
+.graph_back_link {
+    flex-shrink: 0;
+}
+
+.dashboard-title {
+    flex: 1;
+    text-align: center;
+    margin-left: 100px;
+    font-size: 24px;
+    padding: 0;  /* Remove conflicting padding-top */
+}
+
+.graph_go_back_button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 10px 16px;
+    min-height: 40px;  
+    background: #F2F9FF;
+    border: 1px solid #c9c9c9;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 14px;
+    white-space: nowrap;
+    text-decoration: none; 
+    color: #333;
+}
+
+
+
+/* sidebar + main content */
 .main_content {
-    padding: 5px;
+    padding: 10px 15px;
     margin-left: 164px;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
 }
 
 @media (max-width: 768px) {
     .main_content {
         margin-left: 0;
-        margin-top: 0;
+    }
+
+     .dashboard-header-single-phase {
+        width: 100%;
+        margin-left: 0;  /* Full width on mobile */
     }
 }
 
-.container {
-    width: 100%;
-    max-width: 900px;
-    min-height: 700px;
-}
-
-h1 {
-    text-align: center;
-    margin-bottom: 15px;
-    letter-spacing: 1.5px;
-    font-size: 20px;
-    font-weight: bold;
-}
-
+/* ========== DASHBOARD CARD ========== */
 .dashboard-box {
+    width: 100%;
     background: #fff;
     border-radius: 15px;
-    border: 1px solid #242424;
-    padding: 0 0 25px 0;
-    margin-bottom: 20px;
+    /* border: 1px solid #242424; */
+    padding: 15px 20 25px ;
+    margin: 15px auto 20px auto;
     box-shadow: 0 5px 20px rgba(0, 0, 0, 0.1);
-    position: relative;
+   
 }
 
+
+
+/* mobile: title left align + button upar aa sakta hai agar chaho */
+@media (max-width: 576px) {
+     .dashboard-header {
+        width: 100% !important;
+        margin-left: 0 !important;
+    }
+    .dashboard-title {
+        flex: 1 0 100%;
+        text-align: center;
+        margin-top: 6px;
+    }
+    .header-spacer {
+        display: none;
+    }
+}
+
+
+.dashboard-header h2 {
+    font-size: 24px;
+    margin: 0;
+}
+
+/* section title on card */
 .section-title {
-    background: lab(98 -11.85 7.29);
+    background: #F5F8FD;
     padding: 12px 25px;
     font-weight: bold;
-    font-size: 28px;
+    font-size: 24px;
     letter-spacing: 1.2px;
     border-radius: 15px 0 15px 0;
     display: inline-block;
-    color: #23743F;
+    color: #3286FF;
 }
 
-.card {
-    background: #ffffff;
-    padding: 15px;
-    border-radius: 10px;
-}
-
+/* ========== SWITCH (generic) ========== */
 .switch {
     position: relative;
     display: inline-block;
@@ -79,10 +139,7 @@ h1 {
 .slider {
     position: absolute;
     cursor: pointer;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
+    inset: 0;
     background-color: #ccc;
     border-radius: 40px;
     transition: .4s;
@@ -100,44 +157,37 @@ h1 {
     border-radius: 50%;
 }
 
-input:checked+.slider {
+input:checked + .slider {
     background-color: #4B74FE;
 }
 
-input:checked+.slider:before {
+input:checked + .slider:before {
     transform: translateX(35px);
 }
 
-
-/* 4 channel btb css */
-/* 4 Channel BTB Section */
-.btb-card {
-
-    padding: 25px;
-    border-radius: 15px;
-    margin: 15px 20px;
-}
-
+/* ========== 4‑CHANNEL BTB LAYOUT ========== */
 .btb-main {
     display: flex;
     justify-content: space-between;
-    align-items: center;
+    align-items: stretch;
     flex-wrap: wrap;
-    gap: 30px;
+    gap: 20px;
+    padding: 40px;
 }
 
-/* LEFT SIDE */
+/* LEFT SIDE (master) */
 .btb-left {
-    flex: 1;
-    background: #fff4e8;
+    flex: 1 1 260px;
+    background: #fff8f6;
     border-radius: 20px;
-    padding: 54px;
+    padding: 30px 25px;
     text-align: center;
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+    position: relative;
 }
 
 .btb-title {
-    font-size: 24px;
+    font-size: 22px;
     font-weight: 700;
     color: #333;
     letter-spacing: 1.2px;
@@ -150,7 +200,7 @@ input:checked+.slider:before {
     margin-bottom: 20px;
 }
 
-/* BIG MASTER SWITCH */
+/* big master switch */
 .large-switch {
     width: 85px;
     height: 42px;
@@ -163,34 +213,61 @@ input:checked+.slider:before {
     bottom: 4px;
 }
 
-.large-switch input:checked+.slider:before {
+.large-switch input:checked + .slider:before {
     transform: translateX(42px);
 }
 
-/* RIGHT SIDE */
+/* arrow button on master card */
+.btb-arrow-btn {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    width: 24px;
+    height: 24px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: transform 0.2s ease;
+}
+
+.btb-arrow-btn img {
+    width: 16px;
+    height: 16px;
+    object-fit: contain;
+}
+
+.btb-arrow-btn:hover {
+    transform: translateX(3px);
+}
+
+/* RIGHT SIDE (4 tiles) */
 .btb-right {
-    flex: 1;
+    /* flex: 1 1 260px; */
+     flex: 1;
     display: flex;
     justify-content: center;
 }
 
 .btb-grid {
     display: grid;
-    grid-template-columns: repeat(2, 1fr);
+    grid-template-columns: repeat(2, minmax(140px, 1fr));
+    /* gap: 15px; */
     gap: 20px;
+    width: 100%; 
 }
 
 .btb-light {
-    background: #fff4e8;
-    width: 160px;
-    height: 110px;
+    background: #fff8f6;
     border-radius: 20px;
+    padding: 18px 12px;
     display: flex;
     flex-direction: column;
     justify-content: center;
     align-items: center;
     box-shadow: 0 3px 8px rgba(0, 0, 0, 0.05);
     transition: 0.3s;
+    position: relative;
 }
 
 .btb-light:hover {
@@ -204,36 +281,40 @@ input:checked+.slider:before {
     font-weight: 600;
 }
 
-.btb-light,
-.btb-left {
-    position: relative;
+/* footer */
+footer {
+    font-size: 13px;
+}
+footer span {
+    font-weight: 700;
 }
 
+/* ===== mobile tweaks ===== */
+@media (max-width: 768px) {
+    .dashboard-header {
+        flex-direction: column;
+        align-items: flex-start;
+    }
 
+    .section-title {
+        font-size: 20px;
+    }
 
-.btb-arrow-btn {
-    position: absolute;
-    top: 10px;
-    right: 8px;
-    width: 22px;
-    height: 22px;
-    /* background-image: url("/static/img/right-arrow-2.png"); */
-    background-size: contain;
-    background-repeat: no-repeat;
-    background-position: center;
-    cursor: pointer;
-    transition: transform 0.2s ease;
+    .btb-main {
+        padding: 15px;
+    }
+
+    .btb-grid {
+        grid-template-columns: 1fr 1fr;
+    }
 }
 
-/* Hover effect (optional) */
-.btb-arrow-btn:hover {
-    transform: translateX(3px);
-    filter: brightness(1.2);
-}
+@media (max-width: 480px) {
+    .btb-grid {
+        grid-template-columns: 1fr;
+    }
 
-
-.btb-arrow-btn img {
-    width: 15px;
-    height: 15px;
-    object-fit: contain;
+    .btb-left {
+        padding: 22px 16px;
+    }
 }

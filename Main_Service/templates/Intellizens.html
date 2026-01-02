@@ -11,9 +11,14 @@
 </head>
 
 <body>
-    <div id="sidebar-placeholder">
-        {% include 'navbar.html' %}
-    </div>
+    <!-- MOBILE HAMBURGER -->
+    <button class="btn btn-primary d-lg-none m-2" onclick="toggleMobileSidebar()">
+        <i class="fa-solid fa-bars"></i>
+    </button>
+
+    <!-- SIDEBAR -->
+    {% include 'navbar.html' %}
+
 
     <div class="main_content d-flex flex-column min-vh-100">
 
@@ -128,6 +133,7 @@
             masterSwitch.checked = lights.some(l => l.checked);
 
             const [, master_id, slave_id] = serial.split(":");
+            const light_type = "IntelliZENS"
 
             // Master switch
             masterSwitch.addEventListener("change", () => {
@@ -138,6 +144,7 @@
                     serial,
                     master_id,
                     slave_id,
+                    light_type,
                     light: "MASTER",
                     intensity
                 });
@@ -152,6 +159,7 @@
                         serial,
                         master_id,
                         slave_id,
+                        light_type,
                         light: sw.dataset.light,
                         intensity
                     });

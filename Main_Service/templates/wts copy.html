@@ -12,9 +12,13 @@
 </head>
 
 <body>
-    <div id="sidebar-placeholder">
-        {% include 'navbar.html' %}
-    </div>
+     <!-- MOBILE HAMBURGER -->
+    <button class="btn btn-primary d-lg-none m-2" onclick="toggleMobileSidebar()">
+        <i class="fa-solid fa-bars"></i>
+    </button>
+
+    <!-- SIDEBAR -->
+    {% include 'navbar.html' %}
 
     <div class="main_content d-flex flex-column min-vh-100">
         <div>

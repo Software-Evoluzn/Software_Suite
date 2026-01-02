@@ -34,9 +34,9 @@ sid_to_email = {}
 # ======================= MicroService Connection Start ========================
 micro_client = socketio_client.Client()
 
-LMS_Lora_URL = 'http://192.168.1.25:5002'
-Measurement_Mqtt_URL = 'http://192.168.1.19:5003'
-Safety_Mqtt_URL = 'http://192.168.1.25:5004'
+LMS_Lora_URL = 'http://192.168.1.20:5002'
+Measurement_Mqtt_URL = 'http://192.168.1.20:5003'
+Safety_Mqtt_URL = 'http://192.168.1.34:5004'
 
 try:
     micro_client.connect(LMS_Lora_URL)
@@ -179,7 +179,7 @@ def create_tables():
         """)
     
     product_details_query = ("""
-        CREATE TABLE product_details (
+        CREATE TABLE IF NOT EXISTS product_details (
             id INT AUTO_INCREMENT PRIMARY KEY,
             company_name VARCHAR(255) NOT NULL,
             product_type VARCHAR(100) NOT NULL,
@@ -231,7 +231,27 @@ def create_tables():
         )
     '''
 
-    
+    lms_lora_table_query = '''
+    CREATE TABLE IF NOT EXISTS lms_lora (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        master_id VARCHAR(10),
+        slave_id VARCHAR(10),
+        intensity INT,
+        load_status INT,
+        power DECIMAL(10,2),
+        auto_brightness_status INT,
+        auto_motion_status INT,
+        lux_sensor_status VARCHAR(10),
+        lux DECIMAL(10,2),
+        pir INT,
+        ntc_temp DECIMAL(10,2),
+        floor_lux DECIMAL(10,2),
+        aht25_temp DECIMAL(10,2),
+        humidity DECIMAL(10,2),
+        raw_data TEXT,
+        insert_timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
+    );
+'''
 
     # ALTER TABLE alert_temp ADD UNIQUE unique_index (device_name, timestamp)
     conn.commit()
@@ -249,6 +269,7 @@ def create_tables():
         cursor.execute(intellizens_table_query)
         cursor.execute(product_query)
         cursor.execute(product_details_query)
+        cursor.execute(lms_lora_table_query)
         conn.commit()
         print("Tables created successfully.")
     except mysql.connector.Error as err:
@@ -441,7 +462,6 @@ def save_device_status(device_id, status):
     finally:
         cursor.close()
         conn.close()
-
 
 
 @app.route('/')
@@ -817,7 +837,7 @@ def inject_user_products():
         elif isinstance(p, str):
             product_types.append(p)
 
-    # print("Injected products for user:", product_types, product_rows)
+    print("Injected products for user:", product_types, product_rows)
 
     return {
         'products': product_types,
@@ -932,490 +952,6 @@ def product_dashboard():
         is_admin=is_admin
     )
 
-
-# ======================= MicroService For Office Light  START ========================
-def get_product_list_of_user(name, company_name):
-    conn = connect_db()
-    cursor = conn.cursor()
-
-    # Case-insensitive match for user_access
-    query = """
-        SELECT serial_number 
-        FROM product_details 
-        WHERE company_name = %s 
-        AND LOWER(user_access) LIKE %s
-    """
-    # Add wildcards for partial match (e.g., "mayur deshmukh" in "Mayur Deshmukh, Prajwal Bhoyar")
-    cursor.execute(query, (company_name, f"%{name.lower()}%"))
-
-    rows = cursor.fetchall()
-    conn.close()
-
-    # Extract serial numbers into a list
-    serial_numbers = [row[0] for row in rows]
-    return serial_numbers
-
-def create_xlsx_response(data, headers, filename):
-    """Create and return an XLSX file response."""
-    if data is None or len(data) == 0:
-        return "No data to download.", 404
-
-    workbook = Workbook()
-    sheet = workbook.active
-    sheet.append(headers)
-
-    for row in data:
-        # Create a list of values, filtering out None values
-        values_to_append = [
-            row.get('date'),
-            row.get('hour'),
-            row.get('power_consumption'),
-            row.get('active_run_time'),
-            row.get('power_saving')
-        ]
-
-        # Filter out None values
-        filtered_values = [value for value in values_to_append if value is not None]
-
-        # Append the filtered values to the sheet
-        if filtered_values:  # Ensure there is at least one value to append
-            sheet.append(filtered_values)
-
-    with tempfile.NamedTemporaryFile(delete=False, suffix='.xlsx') as temp_file:
-        workbook.save(temp_file.name)
-        temp_file_name = temp_file.name
-
-    response = send_file(temp_file_name, as_attachment=True, download_name=filename, mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
-
-    # Set custom headers for cache control
-    response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
-    response.headers['Pragma'] = 'no-cache'
-    response.headers['Expires'] = '0'
-
-    return response
-
-def get_last_intensity(id):
-    try:
-        conn = connect_db()
-        cursor = conn.cursor()
-        device_id = id.replace("/control", "")
-
-        # Case-insensitive match for user_access
-        query = """
-             SELECT intensity FROM sensor_data 
-                WHERE device_id = %s AND device_status = '1'
-                ORDER BY inserttimestamp DESC 
-                LIMIT 1
-        """
-        
-        cursor.execute(query, (device_id,))
-
-        result = cursor.fetchone()
-        conn.close()
-
-        if result and result[0] is not None:
-            return int(result[0])
-
-    except Exception as e:
-        print(f"❌ DB Error: {e}")
-
-    return 100  # Default fallback intensity
-
-@app.route("/download_xlsx_individual_office_light", methods=['POST'])
-def download_xlsx_individual_office_light():
-    print('Inside function')
-    try:
-        
-        result = get_user_name_from_token()
-        name = result.get('name')
-        company_name = result.get('company_name')
-        
-        data = request.json
-        print('Received data:', data)
-        start_date = data.get('startDate')
-        end_date = data.get('endDate')
-        timeselect = data.get('timeSelect')
-        device_id = data.get('device_id')
-        print(f"start_date: {start_date}, end_date: {end_date}")
-
-        conn = connect_db()
-        cursor = conn.cursor()
-
-        if timeselect in ["daily", "daily-individual"] or (start_date == end_date and timeselect == "set-date-individual"):
-            query = """
-                WITH r AS (
-                    SELECT 
-                        HOUR(inserttimestamp) AS hour, 
-                        DATE(inserttimestamp) AS date,  
-                        COUNT(CASE WHEN POWER > 0 THEN 1 END) AS active_run_time,
-                        ROUND((CASE WHEN COUNT(*) > 0 THEN (SUM(COALESCE(POWER, 0)) / 60) ELSE 0 END), 2) AS tot_power,
-                        COUNT(*) AS count, 
-                        device_id,
-                        ROUND((48 - CASE WHEN COUNT(*) > 0 THEN (SUM(POWER) / 60) ELSE 0 END), 2) AS power_saving
-                    FROM 
-                        sensor_data
-                    WHERE 
-                        device_type = 'office'
-                        AND DATE(inserttimestamp) BETWEEN %s AND %s
-                        AND device_id = %s
-                    GROUP BY 
-                        DATE(inserttimestamp), HOUR(inserttimestamp), device_id
-                )
-                SELECT 
-                    r.date AS date,             
-                    r.hour AS hour, 
-                    ROUND(SUM(r.active_run_time), 2) AS active_run_time, 
-                    ROUND(SUM(r.tot_power), 2) AS power_consumption, 
-                    ROUND(SUM(r.power_saving), 2) AS power_saving
-                FROM 
-                    r
-                GROUP BY 
-                    r.date,                     
-                    r.hour
-                ORDER BY 
-                    r.date,                     
-                    r.hour;                    
-            """
-            cursor.execute(query, (start_date, end_date, device_id))
-        elif timeselect == "set-date-individual" and start_date != end_date:
-            query = """
-                WITH r AS (
-                    SELECT 
-                        DATE(inserttimestamp) AS date,
-                        HOUR(inserttimestamp) AS hour,  
-                        COUNT(CASE WHEN POWER > 0 THEN 1 END) AS active_run_time,
-                        ROUND((CASE WHEN COUNT(*) > 0 THEN (SUM(COALESCE(POWER, 0)) / 60) ELSE 0 END), 2) AS tot_power, 
-                        COUNT(*) AS count, 
-                        device_id,
-                        ROUND((48 - CASE WHEN COUNT(*) > 0 THEN (SUM(POWER) / 60) ELSE 0 END), 2) AS power_saving
-                    FROM 
-                        sensor_data
-                    WHERE 
-                        device_type = 'office'
-                        AND DATE(inserttimestamp) BETWEEN %s AND %s
-                        AND device_id = %s
-                    GROUP BY 
-                        DATE(inserttimestamp), HOUR(inserttimestamp), device_id
-                )
-                SELECT 
-                    r.date AS date, 
-                    ROUND(SUM(r.active_run_time), 2) AS active_run_time, 
-                    ROUND(SUM(r.tot_power), 2) AS power_consumption, 
-                    ROUND(SUM(r.power_saving), 2) AS power_saving
-                FROM 
-                    r
-                GROUP BY 
-                    r.date
-                ORDER BY 
-                    r.date ASC;
-            """
-            cursor.execute(query, (start_date, end_date, device_id))
-
-        results = cursor.fetchall()
-        # print('Query results:', results)
-
-        if timeselect == "daily-individual" or (start_date == end_date and timeselect == "set-date-individual"):
-            data = [{
-                'date': str(row[0]), 
-                'hour': int(row[1]),   
-                'active_run_time': float(row[2]),  
-                'power_consumption': float(row[3]), 
-                'power_saving': float(row[4]),
-            } for row in results]
-        else:
-            data = [{
-                'date': str(row[0]),  
-                'active_run_time': float(row[1]),
-                'power_consumption': float(row[2]),  
-                'power_saving': float(row[3]),
-            } for row in results]
-
-        print("Prepared data for XLSX:", data)    
-
-        headers = (
-            ["Date", "Hour", "Power Consumption", "Active Run Time", "Power Saving"]
-            if start_date == end_date
-            else ["Date", "Power Consumption", "Active Run Time", "Power Saving"]
-        )
-
-        cursor.close()
-        conn.close()
-
-        if not data:
-            return "No data available for Office Light", 404
-
-        return create_xlsx_response(data, headers, "office_light_individual_data.xlsx")
-
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
-
-@app.route('/office_light', methods=['GET', 'POST'])
-def office_light():
-    global ids, devices
-    result = get_user_name_from_token()
-    name = result.get('name')
-    company_name = result.get('company_name')
-
-
-    # print("result-->", result)
-    serial_numbers = get_product_list_of_user(name, company_name)
-    print(f"Serial numbers for {name} in {company_name}: {serial_numbers}")
-
-    conn = connect_db()
-    cursor = conn.cursor()
-
-    cursor.execute("""
-        SELECT DISTINCT device_type, device_id 
-        FROM sensor_data
-        WHERE device_type = 'office'
-    """)
-    rows = cursor.fetchall()
-
-    # try:
-    #     mqttc.publish('tubeGlobal/control', "200")
-    # except Exception as e:
-    #     print(f"Error publishing MQTT message: {e}")
-
-    # Step 2: Build 'ids' dictionary
-    ids = defaultdict(list)
-    serial_numbers = []
-    for device_type, device_id in rows:
-        ids[device_type].append(device_id)
-        serial_numbers.append(device_id)
-        
-    try:
-        for device_id in serial_numbers:
-            print(f"Publishing MQTT message for device_id: {device_id}")
-            mqttc.publish(f'{device_id}/control', "200")
-            # mqttc.publish(f'{device_id}/status', qos=1)
-            # mqttc.publish(f'device_id}/auto_motion_status', qos=1)
-            # mqttc.publish(f'device_id}/auto_brightness_status', qos=1)
-            # mqttc.publish(f'device_id}/intensity', qos=1)
-            # mqttc.publish(f'device_id}/lux', qos=1)
-        # mqttc.publish('officeGlobal/control', "200")
-    except Exception as e:
-        print(f"Error publishing MQTT message: {e}")
-
-    # Step 3: Prepare today's date
-    today = datetime.now(timezone.utc).date()
-
-    # Step 4: Fetch today's sensor_data for given devices
-    if serial_numbers:
-        placeholders = ','.join(['%s'] * len(serial_numbers))  # e.g., %s, %s
-        query = f"""
-            SELECT inserttimestamp, device_id, temperature 
-            FROM sensor_data 
-            WHERE DATE(inserttimestamp) = %s 
-            AND device_type = 'office'
-            AND device_id IN ({placeholders})
-            ORDER BY inserttimestamp
-        """
-        cursor.execute(query, [today] + serial_numbers)
-        rows = cursor.fetchall()
-    else:
-        rows = []
-
-    # Step 5: Format as structured_data list of dicts
-    structured_data = [
-        {
-            "timestamp": row[0].strftime("%Y-%m-%d %H:%M"),
-            "device_id": row[1],
-            "temperature": row[2]
-        }
-        for row in rows
-    ]
-
-    # print("Structured data:", structured_data)
-    # print("Device IDs:", serial_numbers)
-    # print("IDs dictionary:", structured_data)
-
-    # Step 6: Return to template
-    return render_template(
-        'office_light.html',
-        structured_data=structured_data,
-        device_ids=serial_numbers,
-        ids=ids
-    )
-
-# office light graph indivi -->
-@socketio.on('graph_data')
-def graph_data(data):
-    conn = None
-    cursor = None
-    try:
-        # Fetch and validate input data
-        today = datetime.today().strftime('%Y-%m-%d')
-        start_date = data.get('startDate', today)
-        end_date = data.get('endDate', today)
-        timeselect = data.get('timeSelect', 'daily-individual')
-        graphselect = data.get('graphSelect')
-        device_id = data.get('deviceId')
-        selected_day = data.get('selectedWeekday')
-
-        print("Received data for graph_data:", data)
-
-        # Validate date inputs
-        if not start_date or not end_date:
-            start_date = end_date = today
-
-        try:
-            datetime.strptime(start_date, '%Y-%m-%d')
-            datetime.strptime(end_date, '%Y-%m-%d')
-        except ValueError:
-            socketio.emit('graph_data', {'error': 'Invalid date format. Please use YYYY-MM-DD.'},room=request.sid)
-            return
-
-        print(f"Validated Start Date: {start_date}, End Date: {end_date}, Time Selection: {timeselect}, Selected Day: {selected_day}")
-
-        # Connect to the database
-        conn = connect_db()
-        cursor = conn.cursor()
-
-        weekday_filter = ""
-        if selected_day != "all":
-            weekday_filter = f"AND WEEKDAY(DATE(inserttimestamp)) = {selected_day}"
-
-        # Define SQL queries based on the timeframe
-        if timeselect == "daily-individual" or (start_date == end_date and timeselect == "set-date-individual"):
-            query =f"""WITH RECURSIVE hours AS (
-            SELECT 0 AS hour
-            UNION ALL
-            SELECT hour + 1 
-            FROM hours 
-            WHERE hour < 23)
-                    SELECT 
-                h.hour, 
-                CURDATE() AS date,
-                COALESCE(COUNT(CASE WHEN dd.POWER > 0 THEN 1 END), 0) AS active_run_time,
-                COALESCE(ROUND(SUM(dd.POWER) / 60, 2), 0) AS tot_power, 
-                COALESCE(COUNT(*), 0) AS count, 
-                dd.device_id AS device_id,
-                COALESCE(ROUND(48 - (SUM(dd.POWER) / 60), 2), 0) AS power_saving
-            FROM 
-                hours h
-            LEFT JOIN 
-                sensor_data dd ON HOUR(dd.inserttimestamp) = h.hour
-				  
-									
-                AND DATE(dd.inserttimestamp) BETWEEN %s AND %s
-                AND dd.device_type = 'office'
-                AND dd.device_id = %s
-            GROUP BY 
-                h.hour, dd.device_id
-            ORDER BY 
-                h.hour;"""
-        elif timeselect == "set-date-individual" and start_date != end_date:
-            query = f"""
-            WITH hourly_data AS (
-                SELECT 
-                    DATE(inserttimestamp) AS date,
-                    HOUR(inserttimestamp) AS hour,  
-                    COUNT(CASE WHEN POWER > 0 THEN 1 END) AS active_run_time,
-                    ROUND(SUM(POWER) / 60, 2) AS tot_power, 
-                    COUNT(*) AS count, 
-                    device_id,
-                    ROUND(48 - (SUM(POWER) / 60), 2) AS power_saving
-                FROM sensor_data
-                WHERE 
-                    device_type = 'office'
-                    AND DATE(inserttimestamp) BETWEEN %s AND %s
-                    AND device_id = %s
-                    {weekday_filter}
-                GROUP BY DATE(inserttimestamp), HOUR(inserttimestamp), device_id
-            )
-            SELECT 
-                date, 
-                ROUND(SUM(active_run_time), 2) AS active_run_time, 
-                ROUND(SUM(tot_power), 2) AS power_consumption, 
-                ROUND(SUM(power_saving), 2) AS power_saving,
-                device_id
-            FROM hourly_data
-            GROUP BY date, device_id
-            ORDER BY date ASC
-            """
-        else:
-            socketio.emit('graph_data', {'error': 'Invalid time selection. Please select a valid timeframe.'},room=request.sid)
-            return
-
-        # Execute query and fetch results
-        cursor.execute(query, (start_date, end_date, device_id))
-        results_graph = cursor.fetchall()
-
-        # print("Query Results:", results_graph)
-
-        # Process and structure results
-        if timeselect == "daily-individual" or (start_date == end_date and timeselect == "set-date-individual"):
-            response_data_graph = [{
-                'date': str(row[1]),
-                'hour': int(row[0]),
-                'active_run_time': float(row[2]),
-                'power_consumption': float(row[3]),
-                'power_saving': float(row[6])
-            } for row in results_graph]
-        else:
-            response_data_graph = [{
-                'date': str(row[0]),
-                'active_run_time': float(row[1]),
-                'power_consumption': float(row[2]),
-                'power_saving': float(row[3])
-            } for row in results_graph]
-
-        # print("Response Data Graph:", response_data_graph)
-
-        # Emit structured data back to the client
-        socketio.emit('graph_data', {
-            'data': response_data_graph,
-            'updatedData': data
-        }, room=request.sid)
-
-    except Exception as e:
-        print("Database query failed:", e)
-        socketio.emit('graph_data', {'error': f"An error occurred: {str(e)}"}, room=request.sid)
-    finally:
-        # Ensure proper resource cleanup
-        if cursor:
-            cursor.close()
-
-# turnon....
-@app.route('/turnMaster', methods=['POST'])
-def turnMaster():
-    print("Here is coming -->")
-    data = request.json
-    id = data.get('id')
-    action = data.get('action')
-    intensity = get_last_intensity(id)
-    print("Turning -->", intensity)
-
-    if action == 'turnonMaster':
-        mqttc.publish(id, f"autoBrightness:0:{intensity}")
-        mqttc.publish(id, "200")
-        return jsonify({'message': f'Switch {id} to {intensity} turned on successfully'})
-    elif action == 'turnoffMaster':
-        mqttc.publish(id, "autoBrightness:0:0") 
-        mqttc.publish(id, "200")
-        return jsonify({'message': f'Switch {id} turned off successfully'})
-    return jsonify({'message': 'Invalid action'})
-
-# for api 6 six individual....device
-@app.route('/intensity_office_individual', methods=['POST'])
-def intensity_office_individual():
-    try:
-        data = request.get_json()
-        print("Received data for intensity update:", data)
-        topic = data.get('topic')
-        led_intensity = data.get('ledIntensity')
-        print(f"Updating intensity for topic: {topic}, intensity: {led_intensity}")
-        payload = f"autoBrightness:0:{led_intensity}"
-        mqttc.publish(topic, payload)
-        mqttc.publish(topic, "200")
-        return jsonify({'success': True, 'message': 'Intensity updated successfully'})
-    except Exception as e:
-        return jsonify({'success': False, 'error': str(e)})
-
-
-# ======================= MicroService For Office Light END ========================
-
-
 # ======================= WTS Microservice Integration START =======================
 @app.route('/wtstempsync')
 def wtstempsync():
@@ -1444,7 +980,7 @@ def wtstempsync():
         print("Alerts", type(alerts))
 
         return render_template(
-            'dashboard23.html',
+            'wts.html',
             name=name,
             device_data=device_data,
             result=result_data,
@@ -1509,11 +1045,13 @@ def temperature(device_id):
         device_id = micro_data['device_id']
         device_data = micro_data['device_data']
         alertsindivisual = micro_data['alertsindivisual']
+        result = micro_data['result']
 
         return render_template(
-            'temperature_graph.html',
+            'wts_graph.html',
             device_id=device_id,
             device_data=device_data,
+            result=result,
             alertsindivisual=alertsindivisual
         )
 
@@ -1608,8 +1146,6 @@ def disconnect():
 
 # ======================= WTS Microservice Integration END =======================
 
-
-
 # ======================= MicroService For BTB 4Channel  START ========================
 @app.route('/btb4channel')
 def btb4channel():
@@ -1645,10 +1181,9 @@ def toggle_device(data):
     print(f"Toggling device {device_id}, intensity {intensity}")
     try:
         # Step 1: Find which device microservice to call
-        response = requests.post(f'{Safety_Mqtt_URL}/handle_on_off',json={
-            "device": f"BTB4Channel:{device_id}",
-            "intensity": intensity
-        })
+        response = requests.post(f'{Safety_Mqtt_URL}/handle_on_off', json=data,
+            timeout=5
+            )
         print("Response from BTB microservice:", response.json())
         return {"status": "OK"}
     except Exception as e:
@@ -1872,18 +1407,19 @@ def single_graph_data(data):
         print("Gateway Socket Error:", e)
         socketio.emit('single_graph_data_response',
                       {'error': str(e)}, room=request.sid)
+
 # ======================= MicroService For Single Phase End ======================
-
-# ======================= MicroService For Running Light  START ========================
-@app.route('/running_light', methods=['GET', 'POST'])
-def running_light():
-    return render_template('running_light.html')
-
-# ======================= MicroService For Running Light END ========================
 
 # ======================= Intellizens Microservice Integration Start =======================
 @app.route('/intellizens_lora', methods=['GET'])
 def intellizens_lora():
+    result = get_user_name_from_token()
+    company_name = result.get('company_name')
+    user_name = result.get('username')
+
+    print("---- Intellizens Lora Page Request ----")
+    print("User:", user_name, "Company:", company_name)
+
     conn = connect_db()
     cursor = conn.cursor(dictionary=True)
 
@@ -1892,8 +1428,16 @@ def intellizens_lora():
         SELECT serial_number, company_name
         FROM product_details
         WHERE product_type = 'IntelliZENS Lora'
-    """)
+        AND company_name = %s
+        AND LOWER(user_access) LIKE %s
+    """, (
+        company_name,
+        f"%{user_name.lower()}%"
+    ))
+    
     products = cursor.fetchall()
+
+    print(products)
 
     intellizens_data = {}  # 🔥 FINAL STRUCTURE
 
@@ -1952,15 +1496,17 @@ def intellizens_control(data):
     try:
         master_id = data.get("master_id")
         slave_id = data.get("slave_id")
-        light = data.get("light")
+        light_control = data.get("light")
+        light_type = data.get("light_type") 
         intensity = int(data.get("intensity", 0))
 
-        print(f"🔘 UI CMD → {master_id}:{slave_id} | {light} | {intensity}")
+        print(f"🔘 UI CMD → {master_id}:{slave_id} | {light_control} | {intensity}")
 
         payload = {
             "master_id": master_id,
             "slave_id": slave_id,
-            "light": light,
+            "light_control": light_control,
+            "light_type": light_type,
             "intensity": intensity
         }
 
@@ -1984,7 +1530,7 @@ def intellizens_control(data):
             "intellizens_ack",
             {
                 "serial": f"T:{master_id}:{slave_id}",
-                "light": light,
+                "light_control": light_control,
                 "intensity": intensity
             },
             room=request.sid
@@ -2002,7 +1548,180 @@ def intellizens_control(data):
 
 # ======================= Intellizens Microservice Integration End ======================
 
-# Route to handle favicon.ico requests and return a 404 response
+# ======================= MicroService For Running (Tubelight) Light  START ========================
+@app.route('/running_lora', methods=['GET'])
+def running_lora():
+    result = get_user_name_from_token()
+    company_name = result.get('company_name')
+    user_name = result.get('username')
+
+    print("---- Running Lora Page Request ----")
+    print("User:", user_name, "Company:", company_name)
+
+    conn = connect_db()
+    cursor = conn.cursor(dictionary=True)
+
+    # 1️⃣ Fetch Running Lora products (access-controlled)
+    cursor.execute("""
+        SELECT serial_number
+        FROM product_details
+        WHERE product_type = 'Running Lora'
+          AND company_name = %s
+          AND LOWER(user_access) LIKE %s
+    """, (
+        company_name,
+        f"%{user_name.lower()}%"
+    ))
+
+    products = cursor.fetchall()
+    running_data = {}
+
+    for product in products:
+        serial = product["serial_number"]
+
+        try:
+            _, master_id, slave_id = serial.split(":")
+        except ValueError:
+            continue
+
+        # 2️⃣ Get latest device data
+        cursor.execute("""
+            SELECT *
+            FROM lms_lora
+            WHERE master_id = %s
+              AND slave_id = %s
+            ORDER BY insert_timestamp DESC
+            LIMIT 1
+        """, (master_id, slave_id))
+
+        row = cursor.fetchone()
+
+        # 3️⃣ Default if no data
+        if not row:
+            running_data[serial] = {
+                "intensity": 0,
+                "load_status": 0,
+                "auto_brightness": 0,
+                "auto_motion": 0,
+                "power": 0,
+                "lux": 0,
+                "temperature": 0,
+                "humidity": 0
+            }
+            continue
+
+
+        # 4️⃣ Build response structure
+        running_data[serial] = {
+            "intensity": row["intensity"],
+            "load_status": row["load_status"],
+            "power": row["power"],
+            "auto_brightness": row["auto_brightness_status"],
+            "auto_motion": row["auto_motion_status"],
+            "lux": row["lux"],
+            "pir": row["pir"],
+            "temperature": row["aht25_temp"],
+            "humidity": row["humidity"],
+            "timestamp": row["insert_timestamp"]
+        }
+
+        for d in running_data.values():
+            d["intensity"] = int(d.get("intensity") or 0)
+            d["power"] = int(d.get("power") or 0)
+            d["auto_motion"] = int(d.get("auto_motion") or 0)
+            d["auto_brightness"] = int(d.get("auto_brightness") or 0)
+            d["load_status"] = int(d.get("load_status") or 0)
+
+        print("Latest Row →", serial, row["insert_timestamp"])
+
+    cursor.close()
+    conn.close()
+
+    return render_template(
+        "Running_Lora.html",
+        running_data=running_data
+    )
+
+@socketio.on("running_lora_control")
+def running_lora_control(data):
+    try:
+        master_id = data.get("master_id")
+        slave_id = data.get("slave_id")
+        serial = data.get("serial")
+        light_type = data.get("light_type")
+        command = data.get("command") 
+
+        if not master_id or not slave_id or not command:
+            raise ValueError("Invalid socket payload")
+
+        print(f"📥 SOCKET CMD → {command} | {master_id}:{slave_id}")
+
+        # =====================================================
+        # 🔆 INTENSITY CONTROL
+        # =====================================================
+        if command == "INTENSITY":
+            intensity = int(data.get("intensity", 0))
+
+            payload = {
+                "master_id": master_id,
+                "slave_id": slave_id,
+                "light_type": light_type,
+                "light_control": "MASTER",   # running = master only
+                "intensity": intensity
+            }
+
+            url = f"{LMS_Lora_URL}/lora_set_intensity"
+
+        # =====================================================
+        # 🤖 AUTO MOTION / AUTO BRIGHTNESS
+        # =====================================================
+        elif command == "AUTO":
+            feature = data.get("feature")
+            value = int(data.get("value", 0))
+
+            if feature not in ("auto_motion", "auto_brightness"):
+                raise ValueError("Invalid AUTO feature")
+
+            payload = {
+                "master_id": master_id,
+                "slave_id": slave_id,
+                "light_type": light_type,
+                "feature": feature,
+                "value": value
+            }
+
+            url = f"{LMS_Lora_URL}/lora_set_auto"
+
+        else:
+            raise ValueError(f"Unknown command: {command}")
+
+        # =====================================================
+        # 🚀 SEND TO MICRO-SERVICE
+        # =====================================================
+        print("📡 FORWARD →", url, payload)
+
+        response = requests.post(url, json=payload, timeout=5)
+
+        if response.status_code != 200:
+            raise RuntimeError(response.text)
+
+        micro_data = response.json()
+
+        if micro_data.get("status") != "success":
+            raise RuntimeError(micro_data)
+
+        print("✅ Microservice ACK:", micro_data)
+
+    except Exception as e:
+        print("❌ Control error:", e)
+        socketio.emit(
+            "running_lora_error",
+            {"error": str(e)},
+            room=request.sid
+        )
+
+# ======================= MicroService For Running (Tubelight) Light END ========================
+
 @app.route('/favicon.ico')
 def favicon():
     return '', 200
@@ -2057,7 +1776,6 @@ def device_status_monitoring(client):
 
     except Exception as e:
         print(f"❌ Error in device_status_monitoring(): {e}")
-
 
 sending_client = connect_mqtt()
 

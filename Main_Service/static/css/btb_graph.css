@@ -1,6 +1,4 @@
-/* =========================================================
-   GLOBAL BASE
-========================================================= */
+/* ========== GLOBAL (page) ========== */
 * {
     margin: 0;
     padding: 0;
@@ -10,31 +8,42 @@
 
 body {
     background: #fff;
+}
+
+/* layout with sidebar */
+.main_content {
+    margin-left: 164px;
+    padding: 10px 15px;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+}
+
+@media (max-width: 768px) {
+    .main_content {
+        margin-left: 0;
+    }
+}
+
+/* ========== DASHBOARD WRAPPER ========== */
+.dashboard {
+    max-width: 1200px;
+    width: 100%;
+    margin: 20px auto;
+    background: #fff;
+    border-radius: 12px;
+    padding: 15px 20px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+}
+
+/* header (title + button) */
+.dashboard-header {
+    max-width: 1200px;
+    margin: 10px auto 0 auto;
     display: flex;
     justify-content: center;
     align-items: center;
-    min-height: 100vh;
-}
-
-/* =========================================================
-   DASHBOARD WRAPPER
-========================================================= */
-.dashboard {
-    width: 1200px;
-    height: 700px;
-    background: #fff;
-    border-radius: 12px;
-    padding: 20px;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
     position: relative;
-}
-
-/* Header */
-.dashboard-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 15px;
 }
 
 .dashboard-header h2 {
@@ -42,12 +51,10 @@ body {
     margin: 0;
 }
 
+/* Go back button pinned left but responsive */
 .graph_go_back_button {
     background: #F2F9FF;
-    position: absolute;
-    top: 23px;
-    left: 25px;
-    color:black;
+    color: black;
     width: 100px;
     height: 35px;
     border: 1px solid #c9c9c9;
@@ -57,6 +64,9 @@ body {
     align-items: center;
     justify-content: center;
     gap: 6px;
+
+    position: absolute;
+    left: 0;
 }
 
 .graph_go_back_button img {
@@ -64,43 +74,39 @@ body {
     height: 15px;
 }
 
-
-/* =========================================================
-   CARD MAIN BLOCK
-========================================================= */
+/* ========== CARD / CHART AREA ========== */
 .card {
     border: 1px solid #ddd;
     border-radius: 12px;
-    height: calc(100% - 50px);
-    padding: 0;
+    padding: 10px 15px 20px 15px;
+    margin-top: 15px;
 }
 
 .card-header {
-    background: lab(98 -11.85 7.29);
+    background: #F5F8FD;
     color: #23743F;
-    padding: 21px 19px;
+    padding: 16px 19px;
     border-radius: 11px 0 16px 0;
-    font-size: 30px;
+    font-size: 24px;
     font-weight: bold;
-    margin-bottom: 15px;
     display: inline-block;
 }
 
-/* =========================================================
-   FILTER BAR (right side filters)
-========================================================= */
+/* right side (filters) */
 .right-side {
     display: flex;
     flex-wrap: wrap;
     align-items: center;
     gap: 12px;
-    margin: 10px 20px;
-    padding: 10px 15px;
+    margin: 10px 5px 0 5px;
+    justify-content: flex-start;
+    padding: 40px;
 }
 
 .filter-group {
     display: flex;
-    gap: 6px;
+    flex-wrap: wrap;
+    gap: 8px;
 }
 
 .filter-select {
@@ -118,7 +124,6 @@ body {
     border-color: #4a68f0;
 }
 
-/* Apply button */
 .btn {
     background: #4a68f0;
     color: #fff;
@@ -135,18 +140,17 @@ body {
     background: #3655e0;
 }
 
-/* =========================================================
-   DATE-RANGE INPUTS
-========================================================= */
+/* DATE RANGE */
 .date-range-container {
     display: none;
-    margin: 10px 0 10px 30px;
+    margin: 10px 0 10px 10px;
     align-items: center;
     gap: 8px;
+    flex-wrap: wrap;
 }
 
 .date-range-container label {
-    font-size: 17px;
+    font-size: 15px;
     font-weight: 500;
 }
 
@@ -162,17 +166,20 @@ body {
     color: #4a68f0;
 }
 
-/* =========================================================
-   CHART SECTION
-========================================================= */
+/* CHART */
 .chart-container {
     width: 100%;
-    overflow-x: auto;
+    margin-top: 10px;
+    position: relative;
+    min-height: 260px;
+    padding: 30px;
 }
 
-canvas {
-    min-width: 100%;
+.chart-container canvas {
+    width: 100% !important;
+    height: 100% !important;
     max-height: 400px;
+    display: block;
 }
 
 #chartLabelText {
@@ -182,151 +189,45 @@ canvas {
     color: #444;
 }
 
-/* =========================================================
-   MODAL + BACKDROP (ROI / future)
-========================================================= */
-#backdrop {
-    position: fixed;
-    inset: 0;
-    background: rgba(0,0,0,0.5);
-    display: none;
-    z-index: 99;
+/* modal & related styles omitted if not needed on this page; 
+   if you still use them, you can keep your existing modal rules here */
+
+/* ===== Responsive ===== */
+@media (max-width: 992px) {
+    .dashboard {
+        margin: 15px auto;
+        padding: 15px;
+    }
 }
 
-.modal {
-    position: fixed;
-    top: 50%;
-    left: 50%;
-    width: 740px;
-    max-height: 90vh;
+@media (max-width: 768px) {
+    .dashboard-header {
+        justify-content: flex-start;
+    }
 
-    background: #fff;
-    border-radius: 10px;
-    padding: 20px;
+    .graph_go_back_button {
+        position: static;
+        margin-right: auto;
+        margin-bottom: 10px;
+    }
 
-    transform: translate(-50%, -50%);
-    display: none;
-    overflow-y: auto;
-    z-index: 100;
+    .dashboard-header h2 {
+        text-align: left;
+        font-size: 22px;
+        margin-left: 5px;
+    }
 
-    box-shadow: 0 8px 24px rgba(0,0,0,0.2);
+    .right-side {
+        justify-content: center;
+    }
+
+    .chart-container {
+        min-height: 220px;
+    }
 }
 
-/* Modal header */
-.modal-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-}
-
-.modal-header h2 {
-    font-size: 20px;
-    margin-left: 250px;
-}
-
-.close {
-    font-size: 20px;
-    font-weight: bold;
-    cursor: pointer;
-}
-
-/* =========================================================
-   FORM GRID (Input layout inside modals)
-========================================================= */
-.section-title {
-    color: #4e73df;
-    font-weight: 600;
-    margin: 15px 0 10px;
-    font-size: 14px;
-}
-
-.form-grid {
-    display: grid;
-    grid-template-columns: repeat(2, 1fr);
-    gap: 12px 20px;
-    margin-bottom: 15px;
-}
-
-.form-grid label {
-    font-size: 13px;
-    color: #333;
-    margin-bottom: 4px;
-    display: block;
-}
-
-.form-grid input {
-    width: 95%;
-    padding: 8px;
-    border: 1px solid #4E81DF;
-    border-radius: 6px;
-    font-size: 14px;
-}
-
-.output-box {
-    background: #f8f9fc;
-    border: 1px solid #e1e1e1;
-    border-radius: 6px;
-    padding: 8px;
-    font-size: 14px;
-    color: #444;
-}
-
-/* =========================================================
-   TIME INPUT BLOCKS
-========================================================= */
-.time-inputs {
-    display: flex;
-    justify-content: space-between;
-    gap: 15px;
-    margin-bottom: 15px;
-}
-
-.time-inputs div {
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-}
-
-.time-inputs label {
-    font-size: 18px;
-    font-weight: 500;
-    margin: 2px 0 2px 5px;
-}
-
-.time-inputs input {
-    padding: 8px;
-    border: 1px solid #ddd;
-    background: #f7f8fc;
-    border-radius: 6px;
-    margin: 0 5px;
-}
-
-/* SET button */
-.set-btn {
-    background: #4d7eff;
-    border: none;
-    padding: 8px 20px;
-    border-radius: 6px;
-    color: #fff;
-    font-size: 14px;
-    cursor: pointer;
-}
-
-.set-btn:hover {
-    background: #3b66d9;
-}
-
-
-.dashboard-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 15px;
-}
-
-.dashboard-header h2 {
-    font-size: 25px;
-    text-align: center;
-    flex: 1;
-    margin: 0;
+@media (max-width: 480px) {
+    .dashboard-header h2 {
+        font-size: 20px;
+    }
 }

@@ -41,24 +41,30 @@ singleMasterSwitch.addEventListener("change", async function () {
 
 });
 
-
-
-
 // Initial load
-if (device_data) {
-    const Single_Phase = device_data["Single_Phase"];
-   
+if (device_data && device_id && device_data[device_id]) {
 
-    if (Single_Phase) {
-        if (Single_Phase.load_status === '0') {
-            singleMasterSwitch.checked = 0;
-        } else if (Single_Phase.load_status === '1') {
-            console.log("Single Phase load_status is valid.");
-            singleMasterSwitch.checked = 1;
-        }
+    console.log("Device Data:", device_data);
+
+    const Single_Phase = device_data[device_id];
+
+    if (Single_Phase.device_type === "Single_Phase") {
+        const isOn = Single_Phase.load_status === "1";
+
+        singleMasterSwitch.checked = isOn;
+        updateSwitchUI(isOn);
+
+        console.log("Initial load_status:", Single_Phase.load_status);
     }
+}
 
-   
+function updateSwitchUI(isOn) {
+    const container = singleMasterSwitch.closest(".switch-container");
+
+    if (!container) return;
+
+    container.classList.toggle("on", isOn);
+    container.classList.toggle("off", !isOn);
 }
 
 // 🔹 Setup chart
@@ -136,12 +142,7 @@ function fetchGraphData() {
     });
 }
 
-
-
-
-
 //  handle backend response singlephase main code 
-
 socket.on('single_graph_data_response', (data) => {
     if (!data || data.error) {
         console.error("Error fetching Singlephase data:", data?.error);
@@ -192,7 +193,6 @@ socket.on('single_graph_data_response', (data) => {
         `4 Channel BTB - ${meta.text}`;
 });
 
-
 // 🔹 UI Elements
 const modeSelect = document.getElementById('modeSelect');
 const graphSelect = document.getElementById('graphType');
@@ -233,4 +233,4 @@ setInterval(() => {
 }, 5 * 60 * 1000);
 
 
-
+fetchGraphData();
