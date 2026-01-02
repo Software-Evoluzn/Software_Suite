@@ -167,90 +167,92 @@ def safe_int(x):
 
 @app.route('/lora_set_intensity', methods=['POST'])
 def lora_set_intensity():
+    conn = None
+    cursor = None
+
     try:
         data = request.get_json(force=True)
         logging.info(f"[MICRO-SERVICE] Payload → {data}")
 
         master_id = data.get("master_id")
         slave_id = data.get("slave_id")
-        light = data.get("light")       # MASTER / D1 / D2 / D3 / D4
+        light_type = data.get("light_type")
+        light_control = data.get("light_control") 
         intensity = int(data.get("intensity", 0))
 
-        if not master_id or not slave_id or not light:
-            return {
-                "status": "error",
-                "message": "Invalid payload"
-            }, 400
+        # ================= VALIDATION =================
+        if not all([master_id, slave_id, light_type, light_control]):
+            return {"status": "error", "message": "Invalid payload"}, 400
+
+        if not 0 <= intensity <= 100:
+            return {"status": "error", "message": "Invalid intensity"}, 400
 
         conn = connect_db()
         cursor = conn.cursor(dictionary=True)
 
-        # ================= FETCH LAST STATE =================
-        cursor.execute("""
-            SELECT D1, D2, D3, D4
-            FROM intellizens_data
-            WHERE master_id=%s AND slave_id=%s
-            ORDER BY created_at DESC
-            LIMIT 1
-        """, (master_id, slave_id))
+        # ================= INTELLIZENS =================
+        if light_type == "IntelliZENS":
+            channels = ["D1", "D2", "D3", "D4"]
 
-        row = cursor.fetchone()
+            cursor.execute("""
+                SELECT D1, D2, D3, D4
+                FROM intellizens_data
+                WHERE master_id=%s AND slave_id=%s
+                ORDER BY created_at DESC
+                LIMIT 1
+            """, (master_id, slave_id))
 
-        # ================= DEFAULT STATE =================
-        if row:
-            last_state = {
-                "D1": row["D1"],
-                "D2": row["D2"],
-                "D3": row["D3"],
-                "D4": row["D4"]
-            }
+            row = cursor.fetchone()
+
+            last_state = {ch: row[ch] if row else "0" for ch in channels}
+            new_state = last_state.copy()
+
+            if light_control == "MASTER":
+                for ch in channels:
+                    new_state[ch] = str(intensity)
+                int_cmd = f"T:{master_id}:{slave_id}:G:{intensity}"
+            else:
+                if light_control not in channels:
+                    return {"status": "error", "message": "Invalid channel"}, 400
+
+                new_state[light_control] = str(intensity)
+                channel_no = light_control.replace("D", "")
+                int_cmd = f"T:{master_id}:{slave_id}:{channel_no}:{intensity}"
+
+            # ================= SEND TO LORA =================
+            command_queue.put((1, int_cmd))
+
+            # ================= DB INSERT =================
+            cursor.execute("""
+                INSERT INTO intellizens_data
+                (master_id, slave_id, D1, D2, D3, D4, intensity)
+                VALUES (%s,%s,%s,%s,%s,%s,%s)
+            """, (
+                master_id,
+                slave_id,
+                new_state["D1"],
+                new_state["D2"],
+                new_state["D3"],
+                new_state["D4"],
+                intensity
+            ))
+
+            conn.commit()
+
+        # ================= RUNNING =================
+        elif light_type == "Running":
+            logging.info("⚙ Running LoRa control not implemented yet", master_id,slave_id,  intensity)
+            int_cmd = f"T:{master_id}:{slave_id}:I:0:{intensity}"
+
+            # ================= SEND TO LORA =================
+            command_queue.put((1, int_cmd))
+            return {"status": "pending", "message": "Running LoRa not implemented"}, 501
+
         else:
-            last_state = {
-                "D1": "0",
-                "D2": "0",
-                "D3": "0",
-                "D4": "0"
-            }
-
-        # ================= BUILD NEW STATE =================
-        new_state = last_state.copy()
-
-        if light == "MASTER":
-            new_state["D1"] = str(intensity)
-            new_state["D2"] = str(intensity)
-            new_state["D3"] = str(intensity)
-            new_state["D4"] = str(intensity)
-            int_cmd = f"T:{master_id}:{slave_id}:G:{intensity}"
-        else:
-            new_state[light] = str(intensity)
-            channel = light.replace("D", "")
-            int_cmd = f"T:{master_id}:{slave_id}:{channel}:{intensity}"
-
-        # ================= SEND TO LORA =================
-        command_queue.put((1, int_cmd))
-
-        # ================= INSERT NEW STATE =================
-        cursor.execute("""
-            INSERT INTO intellizens_data
-            (master_id, slave_id, D1, D2, D3, D4, intensity)
-            VALUES (%s, %s, %s, %s, %s, %s, %s)
-        """, (
-            master_id,
-            slave_id,
-            new_state["D1"],
-            new_state["D2"],
-            new_state["D3"],
-            new_state["D4"],
-            intensity
-        ))
-
-        conn.commit()
+            return {"status": "error", "message": "Unknown light_type"}, 400
 
         logging.info(f"📡 LoRa CMD → {int_cmd}")
         logging.info(f"💾 DB STATE → {new_state}")
-
-        cursor.close()
-        conn.close()
 
         return {
             "status": "success",
@@ -259,11 +261,89 @@ def lora_set_intensity():
         }, 200
 
     except Exception as e:
-        logging.error(f"❌ Error in lora_set_intensity → {e}")
+        logging.exception("❌ Error in lora_set_intensity")
+        return {"status": "error", "message": str(e)}, 500
+
+    finally:
+        if cursor:
+            cursor.close()
+        if conn:
+            conn.close()
+
+@app.route('/lora_set_auto', methods=['POST'])
+def lora_set_auto():
+    conn = None
+    cursor = None
+
+    try:
+        data = request.get_json(force=True)
+        logging.info(f"[MICRO-SERVICE] AUTO Payload → {data}")
+
+        master_id = data.get("master_id")
+        slave_id = data.get("slave_id")
+        light_type = data.get("light_type")
+        feature = data.get("feature")      # auto_motion / auto_brightness
+        value = int(data.get("value", 0))  # 0 / 1
+
+        # ================= VALIDATION =================
+        if not master_id or not slave_id or not light_type or not feature:
+            return {"status": "error", "message": "Invalid payload"}, 400
+
+        if value not in (0, 1):
+            return {"status": "error", "message": "Invalid value"}, 400
+
+        if light_type != "Running":
+            return {"status": "error", "message": "Unsupported light_type"}, 400
+
+        # ================= BUILD LORA COMMAND =================
+        if feature == "auto_motion":
+            int_cmd = f"T:{master_id}:{slave_id}:M:{value}"
+
+        elif feature == "auto_brightness":
+            int_cmd = f"T:{master_id}:{slave_id}:B:{value}"
+
+        else:
+            return {"status": "error", "message": "Invalid auto feature"}, 400
+
+        # ================= SEND TO LORA =================
+        command_queue.put((1, int_cmd))
+        logging.info(f"📡 LoRa CMD → {int_cmd}")
+
+        # ================= OPTIONAL: SAVE STATE =================
+        conn = connect_db()
+        cursor = conn.cursor()
+
+        cursor.execute("""
+            INSERT INTO lms_lora
+            (master_id, slave_id, auto_motion_status, auto_brightness_status)
+            VALUES (%s, %s,
+                    %s,
+                    %s)
+        """, (
+            master_id,
+            slave_id,
+            value if feature == "auto_motion" else None,
+            value if feature == "auto_brightness" else None
+        ))
+
+        conn.commit()
+
         return {
-            "status": "error",
-            "message": str(e)
-        }, 500
+            "status": "success",
+            "command": int_cmd,
+            "feature": feature,
+            "value": value
+        }, 200
+
+    except Exception as e:
+        logging.exception("❌ Error in lora_set_auto")
+        return {"status": "error", "message": str(e)}, 500
+
+    finally:
+        if cursor:
+            cursor.close()
+        if conn:
+            conn.close()
 
 
 # =====================================================================================
@@ -271,11 +351,44 @@ def lora_set_intensity():
 # =====================================================================================
 PAUSE_BACKGROUND = threading.Event()
 
+def get_lora_devices():
+    conn = connect_db()
+    cursor = conn.cursor(dictionary=True)
+
+    cursor.execute("""
+        SELECT serial_number
+        FROM product_details
+        WHERE LOWER(connection_type) = 'lora'
+          AND LOWER(product_type) != 'intellizens lora'
+    """)
+
+    rows = cursor.fetchall()
+    cursor.close()
+    conn.close()
+
+    devices = {}
+
+    for row in rows:
+        serial = row["serial_number"]  # Example: T:02:01
+
+        try:
+            _, master_id, slave_id = serial.split(":")
+        except ValueError:
+            continue  # skip invalid serial format
+
+        devices.setdefault(master_id, []).append(slave_id)
+
+    return devices
+
+
+
 def background_read_cycle():
-    """Continuously send read commands while RUN_BACKGROUND_CYCLE is True"""
+    """Continuously send read commands for all LoRa masters/slaves"""
+
     while True:
+
         if not RUN_BACKGROUND_CYCLE:
-            logging.info("⏹️ Background read cycle is disabled. Waiting 5s...")
+            logging.info("⏹️ Background read cycle disabled. Waiting 5s...")
             time.sleep(5)
             continue
 
@@ -284,95 +397,85 @@ def background_read_cycle():
             continue
 
         try:
-            print("Started the Data Entry-->")
-            conn = sqlite3.connect(DB_PATH)
-            cursor = conn.cursor()
-            cursor.execute("SELECT master_id, device_name FROM device_register")
-            devices = cursor.fetchall()
-            cursor.close()
-            conn.close()
+            logging.info("🔁 Fetching LoRa devices...")
+            lora_devices = get_lora_devices()
 
-            if not devices:
-                logging.info("⚠️ No devices found. Retrying in 30s...")
+            if not lora_devices:
+                logging.warning("⚠️ No LoRa devices found. Retrying in 30s...")
                 time.sleep(30)
                 continue
 
-            logging.info(f"🔁 Starting read cycle for {len(devices)} devices...")
+            logging.info(f"📡 Found {len(lora_devices)} LoRa masters")
 
-            for master_id, slave_id in devices:
+            for master_id, slave_ids in lora_devices.items():
 
-                if PAUSE_BACKGROUND.is_set():
-                    break
-                
-                time.sleep(3)
-                ser.reset_input_buffer()
-
-                command = f"T:{master_id}:GG:S"
-                print("📤 -->", command)
-
-                success = False
-                retry_count = 0
-
-                while retry_count < 3 and not success:
-                    retry_count += 1
+                for slave_id in slave_ids:
 
                     if PAUSE_BACKGROUND.is_set():
-                            break
+                        break
 
-                    # Send command
-                    ser.reset_input_buffer()
-                    ser.write((command + "\r\n").encode())
-                    ser.flush()
+                    command = f"T:{master_id}:GG:S"
+                    retry_count = 0
+                    success = False
 
-                    logging.info(f"📤 [{master_id}] Attempt {retry_count}/3")
+                    while retry_count < 3 and not success:
+                        retry_count += 1
 
-                    start_time = time.time()
-                    got_ack = False
+                        ser.reset_input_buffer()
+                        ser.write((command + "\r\n").encode())
+                        ser.flush()
 
-                    # Listen here instead of separate listen thread
-                    while time.time() - start_time < 8:
-                        if PAUSE_BACKGROUND.is_set():
-                            logging.info("⏸️ Background paused mid-read")
-                            return 
-                        line = ser.readline().decode('utf-8', errors='ignore').strip()
-                        if not line:
-                            continue
+                        logging.info(
+                            f"📤 [{master_id}:{slave_id}] Attempt {retry_count}/3 → {command}"
+                        )
 
-                        print("📩 Received:", line)
+                        start_time = time.time()
 
-                        # We only accept correct ACK for this master id
-                        # if line.startswith(f"Ack- R:{master_id}:"):
-                        if line.startswith((f"Ack- R:{master_id}:", f"R:{master_id}:")):
-                            got_ack = True
-                            valid = process_line(line)
-                            if valid:
-                                logging.info(f"✅ [{master_id}] Data processed successfully")
-                                success = True
-                            else:
-                                logging.warning(f"⚠️ [{master_id}] Invalid ACK data")
-                            break
+                        while time.time() - start_time < 8:
+                            if PAUSE_BACKGROUND.is_set():
+                                return
 
-                    if not got_ack:
-                        logging.warning(f"⚠️ [{master_id}] No valid ACK, retrying...")
-                        continue
+                            line = ser.readline().decode("utf-8", errors="ignore").strip()
+                            if not line:
+                                continue
 
-                if not success:
-                    logging.error(f"❌ [{master_id}] Skipped after 3 failed attempts.")
+                            print("📩 Received:", line)
 
-            logging.info("✅ Completed full read cycle. Waiting 30 seconds...")
+                            if line.startswith((f"Ack- R:{master_id}:", f"R:{master_id}:")):
+                                valid = process_line(line)
+                                if valid:
+                                    logging.info(f"✅ [{master_id}:{slave_id}] Data OK")
+                                    success = True
+                                else:
+                                    logging.warning(
+                                        f"⚠️ [{master_id}:{slave_id}] Invalid data"
+                                    )
+                                break
+
+                        if not success:
+                            logging.warning(
+                                f"🔄 [{master_id}:{slave_id}] Retry {retry_count}"
+                            )
+
+                    if not success:
+                        logging.error(
+                            f"❌ [{master_id}:{slave_id}] Failed after 3 attempts"
+                        )
+
+                    time.sleep(2)  # throttle per slave
+
+            logging.info("✅ Completed LoRa read cycle. Sleeping 10s...")
             time.sleep(10)
 
         except Exception as e:
-            logging.error(f"❌ Background cycle error: {e}")
-            logging.error(traceback.format_exc())
+            logging.error("❌ Background cycle error", exc_info=True)
             time.sleep(10)
 
 
 def process_line(line):
-    """Process received data line"""
     try:
         parts = line.split(":")
-        if len(parts) < 10:
+        if len(parts) < 9:
             return False
 
         if parts[0] not in ["R", "Ack- R"]:
@@ -381,13 +484,17 @@ def process_line(line):
         master_id = parts[1]
         slave_id = parts[2]
 
-        def safe_int(v, d=None):
-            try: return int(v)
-            except: return d
-        
-        def safe_float(v, d=None):
-            try: return float(v)
-            except: return d
+        def safe_int(v, d=0):
+            try:
+                return int(v)
+            except:
+                return d
+
+        def safe_float(v, d=0.0):
+            try:
+                return float(v)
+            except:
+                return d
 
         if parts[3] == "S":
             intensity = safe_int(parts[4])
@@ -403,41 +510,36 @@ def process_line(line):
             aht25_temp = safe_float(parts[14]) if len(parts) > 14 else None
             humidity = safe_float(parts[15]) if len(parts) > 15 else None
 
-            conn = sqlite3.connect(DB_PATH)
+            raw_data = line
+
+            conn = connect_db()
             cursor = conn.cursor()
-            cursor.execute('''
-                INSERT INTO device_data (
+
+            cursor.execute("""
+                INSERT INTO lms_lora (
                     master_id, slave_id, intensity, load_status, power,
-                    auto_brightness_status, auto_motion_status, lux_sensor_status,
-                    lux, pir, ntc_temp, floor_lux, aht25_temp, humidity
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-            ''', (
+                    auto_brightness_status, auto_motion_status,
+                    lux_sensor_status, lux, pir, ntc_temp,
+                    floor_lux, aht25_temp, humidity, raw_data
+                ) VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
+            """, (
                 master_id, slave_id, intensity, load_status, power,
-                auto_brightness_status, auto_motion_status, lux_sensor_status,
-                lux, pir, ntc_temp, floor_lux, aht25_temp, humidity
+                auto_brightness_status, auto_motion_status,
+                lux_sensor_status, lux, pir, ntc_temp,
+                floor_lux, aht25_temp, humidity, raw_data
             ))
+
             conn.commit()
-            inserted_id = cursor.lastrowid
+            cursor.close()
             conn.close()
-            
-            logging.info(f"💾 Saved ID: {inserted_id}")
-            
-            # # ✅ Emit status update to frontend
-            # socketio.emit('status_update', {
-            #     'master_id': master_id,
-            #     'switch': load_status,
-            #     'intensity': intensity,
-            #     'auto_brightness_status': auto_brightness_status,
-            #     'auto_motion_status': auto_motion_status,
-            #     'device_lux': lux
-            # })
+
+            logging.info(f"💾 MySQL Saved → {master_id}:{slave_id}")
 
         return True
 
     except Exception as e:
-        logging.error(f"❌ Process line error: {e}")
+        logging.error(f"❌ Process line error: {e}", exc_info=True)
         return False
-
 
 # ===================================================================================== 
 if __name__ == "__main__":

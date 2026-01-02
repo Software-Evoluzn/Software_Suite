@@ -2,210 +2,467 @@
 <html lang="en">
 
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Navbar</title>
-  <link rel="stylesheet" href="../static/css/navbar.css" />
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css"
-    integrity="sha512-SnH5WK+bZxgPHs44uWIX+LLJAJ9/2PkPKZ5QiAj6Ta86w+fsb2TkcmfRyVX3pBnMFcV7oQPJkl9QevSCWr3W6A=="
-    crossorigin="anonymous" referrerpolicy="no-referrer" />
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>RTU Control System</title>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap"
+    rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+
   <style>
-    .loader-overlay {
+    :root {
+      --bg: #f4f7fe;
+      --sidebar: #001529;
+      --text: #1b2559;
+      --card: #ffffff;
+    }
+
+    body.dark {
+      --bg: #0f172a;
+      --sidebar: #020617;
+      --text: #e5e7eb;
+      --card: #020617;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      margin: 0;
+      font-family: 'Plus Jakarta Sans', sans-serif;
+    }
+
+    /* Sidebar */
+    .sidebar {
       position: fixed;
       top: 0;
       left: 0;
-      width: 100%;
-      height: 100%;
-      background: rgba(255, 255, 255, 0.9);
+      width: 260px;
+      height: 100vh;
+      background: var(--sidebar);
+      color: white;
       display: flex;
-      justify-content: center;
+      flex-direction: column;
+      transition: 0.3s;
+      z-index: 1000;
+    }
+
+    .sidebar.collapsed {
+      width: 60px;
+    }
+
+    .sidebar.collapsed .nav-text,
+    .sidebar.collapsed .logo-text,
+    .sidebar.collapsed .system-status {
+      display: none;
+    }
+
+    .sidebar-header {
+      padding: 20px;
+      font-weight: 800;
+    }
+
+    .nav-links {
+      padding: 10px;
+      flex: 1;
+      /* ⭐ MOST IMPORTANT LINE */
+      overflow-y: auto;
+    }
+
+    .nav-bottom {
+      padding: 12px;
+      border-top: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+
+    .sidebar-link,
+    .theme-toggle {
+      display: flex;
       align-items: center;
-      z-index: 3000;
+      gap: 15px;
+      padding: 12px 15px;
+      border-radius: 10px;
+      color: #a3aed0;
+      cursor: pointer;
+      text-decoration: none;
+      justify-content: flex-start;
     }
 
-    .loader {
-      width: 50px;
-      height: 50px;
-      border: 6px solid #ddd;
-      border-top-color: #4c6ef5;
+    .sidebar-link:hover,
+    .sidebar-link.active,
+    .theme-toggle:hover {
+      background: #4318ff;
+      color: white;
+    }
+
+    /* When sidebar is collapsed */
+    .sidebar.collapsed .sidebar-link,
+    .sidebar.collapsed .theme-toggle {
+      justify-content: center;
+      gap: 0;
+      padding: 12px;
+    }
+
+
+
+    .system-status {
+      font-size: 12px;
+      color: #01b574;
+      padding: 10px;
+    }
+
+    /* Collapse Button */
+    .collapse-btn {
+      position: absolute;
+      top: 70px;
+      right: -15px;
+      width: 30px;
+      height: 30px;
       border-radius: 50%;
-      animation: spin 0.8s linear infinite;
+      border: 2px solid white;
+      background: #1b2559;
+      color: white;
     }
 
-    @keyframes spin {
-      to {
-        transform: rotate(360deg);
+    /* Main content spacing */
+    .main_content {
+      margin-left: 260px;
+      transition: 0.3s;
+    }
+
+    .sidebar.collapsed~.main_content {
+      margin-left: 80px;
+    }
+
+
+    @media (max-width: 768px) {
+  .sidebar {
+    transform: translateX(-100%);
+  }
+
+  .sidebar.open {
+    transform: translateX(0);
+  }
+
+  .main_content {
+    margin-left: 0;
+  }
+}
+
+
+    /* Mobile Close Button */
+    .mobile-close-btn {
+      background: none;
+      border: none;
+      color: white;
+      font-size: 22px;
+      position: absolute;
+      top: 15px;
+      right: 15px;
+      cursor: pointer;
+    }
+
+    /* Overlay */
+    #sidebarOverlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.4);
+      z-index: 999;
+      display: none;
+    }
+
+    #sidebarOverlay.show {
+      display: block;
+    }
+
+
+
+
+
+    /* SETTINGS POPOVER */
+    .settings-popover {
+      position: fixed;
+      left: 90px;
+      bottom: 90px;
+      width: 220px;
+      background: #f3f3f3;
+      border-radius: 10px;
+      box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
+      display: none;
+      z-index: 2000;
+    }
+
+    /* SHOW */
+    .settings-popover.show {
+      display: block;
+    }
+
+    /* ITEMS */
+    .settings-item {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 12px 16px;
+      cursor: pointer;
+    }
+
+    .settings-item i {
+      font-size: 16px;
+      color: #1b2559;
+    }
+
+    .settings-item a {
+      text-decoration: none;
+      color: #1b2559;
+      font-weight: 500;
+    }
+
+    .settings-item:hover {
+      background: #e6e6e6;
+    }
+
+    .settings-item.logout i,
+    .settings-item.logout a {
+      color: #333;
+    }
+
+    /* Divider */
+    .settings-popover hr {
+      margin: 6px 0;
+      border: none;
+      border-top: 1px solid #ddd;
+    }
+
+    /* 🔒 Disable collapsed state on mobile */
+    @media (max-width: 768px) {
+      .sidebar.collapsed {
+        width: 260px;
+      }
+
+      .sidebar.collapsed .nav-text,
+      .sidebar.collapsed .logo-text,
+      .sidebar.collapsed .system-status {
+        display: block;
+      }
+
+      .sidebar.collapsed .sidebar-link,
+      .sidebar.collapsed .theme-toggle {
+        justify-content: flex-start;
+        gap: 15px;
+        padding: 12px 15px;
       }
     }
   </style>
+
 </head>
 
 <body>
-  <div class="sidebar">
 
-    <div id="page-loader" class="loader-overlay">
-      <div class="loader"></div>
-    </div>
+  <nav class="sidebar" id="mainSidebar">
+    <!-- Collapse Button (Desktop) -->
+    <button class="collapse-btn d-none d-md-flex" onclick="toggleSidebar()">
+      <i class="fa-solid fa-chevron-left" style="margin: auto;"></i>
+    </button>
 
-    <!-- Sidebar -->
-    <aside class="main_sidebar" id="sidebar">
-      <span class="sidebar-close-btn" onclick="toggleSidebar()">x</span>
+    <!-- Mobile Close Button -->
+    <button class="mobile-close-btn d-md-none" onclick="toggleMobileSidebar()">
+      <i class="fa-solid fa-xmark"></i>
+    </button>
 
-      <a class="sidebar-link {% if active_page == 'home' %}active{% endif %}" href="/home">
-        <div class="sidebar_dashboard_icon">
-          <i class="fa-solid fa-layer-group"></i>
-        </div>
-        <div class="sidebar_dashboard_title dashboard_title_dashboard">
-          Dashboard
-        </div>
-      </a>
-
-      {% if 'Running Light' in products %}
-      <a class="sidebar-link {% if active_page == 'running_light' %}active{% endif %}" href="/running_light">
-        <div class="sidebar_dashboard_icon">
-          <i class="fa-solid fa-grip-lines"></i>
-        </div>
-        <div class="sidebar_dashboard_title dashboard_title_dashboard">
-          Running Light
-        </div>
-      </a>
-      {% endif %}
-
-      {% if 'Office Light' in products %}
-      <a class="sidebar-link {% if active_page == 'office_light' %}active{% endif %}" href="/office_light">
-        <div class="sidebar_dashboard_icon">
-          <i class="fa-solid fa-grip-lines"></i>
-        </div>
-        <div class="sidebar_dashboard_title dashboard_title_dashboard">
-          Office Light
-        </div>
-      </a>
-      {% endif %}
-
-      {% if 'Highbay Light' in products %}
-      <a class="sidebar-link {% if active_page == 'hi_bay_light' %}active{% endif %}" href="/">
-        <div class="sidebar_dashboard_icon">
-          <i class="fa-solid fa-lightbulb"></i>
-        </div>
-        <div class="sidebar_dashboard_title dashboard_title_dashboard">
-          Highbay Light
-        </div>
-      </a>
-      {% endif %}
-
-      {% if 'Running Light' in products 
-      or 'Office Light' in products 
-      or 'Highbay Light' in products %}
-      <a class="sidebar-link {% if active_page == 'deviceScheduling' %}active{% endif %}" href="/">
-        <div class="sidebar_dashboard_icon">
-          <i class="fa-solid fa-clock"></i>
-        </div>
-        <div class="sidebar_dashboard_title dashboard_title_dashboard">
-          Scheduling
-        </div>
-      </a>
-      {% endif %}
-
-      {% if 'Wiretempsync' in products %}
-      <a class="sidebar-link {% if active_page == 'temperature' %}active{% endif %}" href="/wtstempsync">
-        <div class="sidebar_dashboard_icon">
-          <i class="fa-solid fa-temperature-half" style="font-size: 25px;"></i>
-        </div>
-        <div class="sidebar_dashboard_title dashboard_title_dashboard" style="display: flex; justify-content: center;">
-          WTS
-        </div>
-      </a>
-      {% endif %}
-
-      {% if 'BTB4Channel' in products %}
-      <a class="sidebar-link {% if active_page == 'temperature' %}active{% endif %}" href="/btb4channel">
-        <div class="sidebar_dashboard_icon">
-          <i class="fa-solid fa-temperature-half" style="font-size: 25px;"></i>
-        </div>
-        <div class="sidebar_dashboard_title dashboard_title_dashboard" style="display: flex; justify-content: center;">
-          BTB 4Channel
-        </div>
-      </a>
-      {% endif %}
-
-      {% if 'Single_Phase' in products %}
-      <a class="sidebar-link {% if active_page == 'temperature' %}active{% endif %}" href="/singlephase">
-        <div class="sidebar_dashboard_icon">
-          <i class="fa-solid fa-temperature-half" style="font-size: 25px;"></i>
-        </div>
-        <div class="sidebar_dashboard_title dashboard_title_dashboard" style="display: flex; justify-content: center;">
-          Single Phase
-        </div>
-      </a>
-      {% endif %}
-
-      {% if 'IntelliZENS Lora' in products %}
-      <a class="sidebar-link {% if active_page == 'temperature' %}active{% endif %}" href="/intellizens_lora">
-        <div class="sidebar_dashboard_icon">
-          <i class="fa-solid fa-temperature-half" style="font-size: 25px;"></i>
-        </div>
-        <div class="sidebar_dashboard_title dashboard_title_dashboard" style="display: flex; justify-content: center;">
-          Lora Intellizens
-        </div>
-      </a>
-      {% endif %}
-
-    </aside>
-    <div class="px-2">
-      <hr class="sidebar_hr">
-      <div class="dashboard_dropdown_main_div">
-        <div onclick="toggledashboard()" class="setting_bar_icon">
-          <div class="d-flex flex-column gap-2 align-items-center">
-            <img class="dashboard_btn" src="../static/img/settings.svg">
-            <div class="dashboard_btn sidebar_dashboard_title">Settings</div>
-          </div>
-        </div>
-
+    <div class="sidebar-header">
+      <div class="logo-text">
+        <i class="fa-solid fa-lightbulb"> </i> Software Suite
       </div>
     </div>
 
-  </div>
+    <div class="nav-links">
 
-  <div id="dashboard-menu" class="dashboard_content_dropdown ">
-    <div class="dashboard_div ">
-      <img src="../static/img/profile.svg">
-      <a href="/product_dashboard">Profile</a>
+      <!-- DASHBOARD -->
+      <a href="/home" class="sidebar-link {% if active_page == 'home' %}active{% endif %}">
+        <i class="fa-solid fa-house"></i>
+        <span class="nav-text">Dashboard</span>
+      </a>
+
+      <!-- RUNNING LIGHT -->
+      {% if 'Running Light' in products %}
+      <a href="/running_light" class="sidebar-link {% if active_page == 'running_light' %}active{% endif %}">
+        <i class="fa-solid fa-bolt"></i>
+        <span class="nav-text">Running Light</span>
+      </a>
+      {% endif %}
+
+      <!-- OFFICE LIGHT -->
+      {% if 'Office Light' in products %}
+      <a href="/office_light" class="sidebar-link {% if active_page == 'office_light' %}active{% endif %}">
+        <i class="fa-solid fa-building"></i>
+        <span class="nav-text">Office Light</span>
+      </a>
+      {% endif %}
+
+      <!-- HIGHBAY LIGHT -->
+      {% if 'Highbay Light' in products %}
+      <a href="/highbay_light" class="sidebar-link {% if active_page == 'hi_bay_light' %}active{% endif %}">
+        <i class="fa-solid fa-industry"></i>
+        <span class="nav-text">Highbay Light</span>
+      </a>
+      {% endif %}
+
+      <!-- SCHEDULING (Common) -->
+      {% if 'Running Light' in products
+      or 'Office Light' in products
+      or 'Highbay Light' in products %}
+      <a href="/deviceScheduling" class="sidebar-link {% if active_page == 'deviceScheduling' %}active{% endif %}">
+        <i class="fa-solid fa-clock"></i>
+        <span class="nav-text">Scheduling</span>
+      </a>
+      {% endif %}
+
+      <!-- WTS -->
+      {% if 'Wiretempsync' in products %}
+      <a href="/wtstempsync" class="sidebar-link {% if active_page == 'wtstempsync' %}active{% endif %}">
+        <i class="fa-solid fa-temperature-half"></i>
+        <span class="nav-text">WTS</span>
+      </a>
+      {% endif %}
+
+      <!-- BTB 4 CHANNEL -->
+      {% if 'BTB4Channel' in products %}
+      <a href="/btb4channel" class="sidebar-link {% if active_page == 'btb4channel' %}active{% endif %}">
+        <i class="fa-solid fa-microchip"></i>
+        <span class="nav-text">BTB 4 Channel</span>
+      </a>
+      {% endif %}
+
+      <!-- SINGLE PHASE -->
+      {% if 'Single_Phase' in products %}
+      <a href="/singlephase" class="sidebar-link {% if active_page == 'singlephase' %}active{% endif %}">
+        <i class="fa-solid fa-plug"></i>
+        <span class="nav-text">Single Phase</span>
+      </a>
+      {% endif %}
+
+      <!-- INTELLIZENS LORA -->
+      {% if 'IntelliZENS Lora' in products %}
+      <a href="/intellizens_lora" class="sidebar-link {% if active_page == 'intellizens_lora' %}active{% endif %}">
+        <i class="fa-solid fa-wifi"></i>
+        <span class="nav-text">Lora IntelliZENS</span>
+      </a>
+      {% endif %}
+
+      <!-- RUNNING LORA -->
+      {% if 'Running Lora' in products %}
+      <a href="/running_lora" class="sidebar-link {% if active_page == 'running_lora' %}active{% endif %}">
+        <i class="fa-solid fa-signal"></i>
+        <span class="nav-text">Lora Running</span>
+      </a>
+      {% endif %}
+
     </div>
 
-    <div>
-      <hr>
+    <div class="nav-bottom">
+
+      <div class="sidebar-link settings-btn" onclick="toggleSettingsMenu(event)">
+        <i class="fa-solid fa-gear"></i>
+        <span class="nav-text">Settings</span>
+      </div>
+
+      <!-- SETTINGS POPOVER -->
+      <div id="settingsPopover" class="settings-popover">
+        <div class="settings-item">
+          <i class="fa-solid fa-user"></i>
+          <a href="/product_dashboard">Profile</a>
+        </div>
+
+        <hr>
+
+        <div class="settings-item" onclick="toggleTheme()">
+          <i class="fa-solid fa-moon"></i>
+          <span class="nav-text">Dark Mode</span>
+        </div>
+
+        <hr>
+
+        <div class="settings-item logout">
+          <i class="fa-solid fa-right-from-bracket"></i>
+          <a href="{{ url_for('logout') }}">Logout</a>
+        </div>
+      </div>
+
     </div>
-    <div class="dashboard_div">
-      <img class="pl-2" src="../static/img/logout.svg">
-      <a href="{{ url_for('logout') }}">logout</a>
-    </div>
-  </div>
+  </nav>
 
   <script>
-    window.addEventListener("load", function () {
-      const loader = document.getElementById("page-loader");
-      setTimeout(() => loader.style.display = "none", 300);
+    function toggleSidebar() {
+      const sidebar = document.getElementById('mainSidebar');
+      sidebar.classList.toggle('collapsed');
+      localStorage.setItem('sidebar', sidebar.classList.contains('collapsed'));
+    }
+
+    function toggleMobileSidebar() {
+      document.getElementById('mainSidebar').classList.toggle('open');
+    }
+
+    function toggleTheme() {
+      document.body.classList.toggle('dark');
+      localStorage.setItem('theme', document.body.classList.contains('dark'));
+    }
+
+    function toggleMobileSidebar() {
+      const sidebar = document.getElementById('mainSidebar');
+      const overlay = document.getElementById('sidebarOverlay');
+
+      sidebar.classList.toggle('open');
+      overlay.classList.toggle('show');
+    }
+
+    function toggleSettingsMenu(event) {
+      event.stopPropagation();
+      document.getElementById("settingsPopover").classList.toggle("show");
+    }
+
+    /* Close on outside click */
+    document.addEventListener("click", function () {
+      document.getElementById("settingsPopover")?.classList.remove("show");
     });
-  </script>
-  <script>
 
-    function toggledashboard() {
-      const menu = document.getElementById("dashboard-menu");
-      menu.classList.toggle("dropdown_show");
-    }
 
-    // Close dropdown if clicked outside
-    window.onclick = function (event) {
-      const menu = document.getElementById("dashboard-menu");
-      const button = document.querySelector('.setting_bar_icon');
+    // window.onload = () => {
+    //   if (localStorage.getItem('sidebar') === 'true') {
+    //     document.getElementById('mainSidebar')?.classList.add('collapsed');
+    //   }
+    //   if (localStorage.getItem('theme') === 'true') {
+    //     document.body.classList.add('dark');
+    //   }
+    // };
 
-      if (!button.contains(event.target) && !menu.contains(event.target)) {
-        menu.classList.remove("dropdown_show");
+    window.onload = () => {
+      const sidebar = document.getElementById('mainSidebar');
+
+      // ✅ Apply collapsed ONLY on desktop
+      if (window.innerWidth > 768 && localStorage.getItem('sidebar') === 'true') {
+        sidebar.classList.add('collapsed');
+      } else {
+        sidebar.classList.remove('collapsed');
       }
-    }
 
-    // *************************************
+      if (localStorage.getItem('theme') === 'true') {
+        document.body.classList.add('dark');
+      }
+    };
+
+
+    window.addEventListener('resize', () => {
+      const sidebar = document.getElementById('mainSidebar');
+
+      if (window.innerWidth <= 768) {
+        sidebar.classList.remove('collapsed');
+      } else if (localStorage.getItem('sidebar') === 'true') {
+        sidebar.classList.add('collapsed');
+      }
+    });
+
   </script>
+
+
 </body>
 
 </html>

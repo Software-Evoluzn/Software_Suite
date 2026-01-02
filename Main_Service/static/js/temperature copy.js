@@ -8,103 +8,6 @@ var pathname = url.pathname;
 var device_id = pathname.split('/').pop();
 console.log("Device ID:!!!!!!!!!!!!", device_id);
 console.log("annotationValue---------------", annotationValue);
-
-// Keep track of the previous panel name
-let globalPanelName = "";
-
-// Select all elements
-const editButtons = document.querySelectorAll('.edit_name');
-const panelapplyButtons = document.querySelectorAll('.apply_name');
-const inputFields = document.querySelectorAll('.control_panel_edit');
-
-editButtons.forEach((button, index) => {
-    button.addEventListener('click', function () {
-        const input = inputFields[index];
-        const title = input.previousElementSibling; // Assuming h4 is right before input
-        const applyBtn = panelapplyButtons[index];
-
-        // Save the current name
-        globalPanelName = input.value;
-
-        // Show input, hide title
-        title.style.display = "none";
-        input.style.display = "inline-block";
-        input.removeAttribute('readonly');
-        input.focus();
-
-        // Show Apply, hide Edit
-        applyBtn.style.display = "inline-block";
-        button.style.display = "none";
-    });
-});
-
-panelapplyButtons.forEach((button, index) => {
-    button.addEventListener('click', function () {
-        const input = inputFields[index];
-        const title = input.previousElementSibling; // h4
-        const editBtn = editButtons[index];
-
-        const newPanelName = input.value;
-
-        // Update title with new value
-        title.textContent = newPanelName;
-
-        // Hide input, show title
-        input.setAttribute('readonly', true);
-        input.style.display = "none";
-        title.style.display = "inline-block";
-
-        // Hide Apply, show Edit
-        button.style.display = "none";
-        editBtn.style.display = "inline-block";
-
-        // Send data to backend
-        const data = {
-            device_name: button.getAttribute('data-id').split('_')[1], // Extract device_name from data-id
-            panel_name: newPanelName,
-            old_panel_value: globalPanelName,
-        };
-
-        // Call the backend API to update the panel name
-        fetch('/update_panel', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify(data)
-        })
-            .then(response => response.json())
-            .then(responseData => {
-                console.log('Response from server:', responseData);
-                button.style.display = "none";
-                input.setAttribute('readonly', true);
-                input.style.border = "none";
-                if (responseData.status === 'success') {
-                    alert("Panel name updated successfully!");
-
-                    const rawId = input.id;
-                    const idParts = rawId.replace("control_panel_edit_1_", "").split("_");
-
-                    const deviceName = idParts.slice(0, 1).join(" ");
-                    const newPanelName = input.value;
-
-                    const sanitize = str => str.trim().replace(/\s+/g, '_');
-
-                    const newDataId = `${sanitize(deviceName)}_${sanitize(newPanelName)}`;
-                    const newInputId = `control_panel_edit_1_${newDataId}`;
-
-                    input.setAttribute('data-id', newDataId);
-                    input.id = newInputId;
-                }
-            })
-            .catch(error => {
-                console.error('Error updating panel name:', error);
-            });
-
-    });
-});
-
-
 applyButton.addEventListener('click', () => {
     let value = parseInt(annotationValue.value, 10);
 
@@ -147,7 +50,6 @@ applyButton.addEventListener('click', () => {
             alert("Failed to update threshold");
         });
 });
-
 
 
 function updateGraph() {
@@ -259,36 +161,7 @@ function setupSocketConnection(ip) {
         thresholdValue = data.threshold
         phase_values = data.phase_values;
         graph_duration = data.graph_duration;
-        const result = data.result;
         data = data.data;
-
-
-         console.log("result", result);
-        
-        // Update MIN and MAX values in the HTML
-        for (let deviceName in result) {
-            console.log("result-->", result);
-
-            const deviceData = result[deviceName];
-
-            // Loop through each sensor for the device
-            for (let sensorName in deviceData) {
-                const sensorData = deviceData[sensorName];
-
-                // Grab the elements in the HTML by device and sensor
-                const minValueElement = document.querySelector(`.dashboard_temp_min_value_div[data-device="${deviceName}"][data-sensor="${sensorName}"]`);
-                const maxValueElement = document.querySelector(`.dashboard_temp_max_value_div[data-device="${deviceName}"][data-sensor="${sensorName}"]`);
-
-                // Set the MIN and MAX values (fallback to 'N/A' if undefined)
-                if (minValueElement) {
-                    minValueElement.textContent = `${sensorData.MIN || '-'}°C`;
-                }
-                if (maxValueElement) {
-                    maxValueElement.textContent = `${sensorData.MAX || '-'}°C`;
-                }
-            }
-        }
-
 
         // Graph duration in seconds from backend
         stepSeconds = graph_duration;

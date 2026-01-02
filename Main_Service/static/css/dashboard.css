@@ -46,16 +46,6 @@ body {
     align-items: center;
 }
 
-.control_panel_edit {
-    font-size: 1.5em; 
-    font-weight: bold; 
-    outline: none;
-    color: #2B3674;
-    border-radius: 5px;
-    border: 1px solid #ccc; /* Adjust thickness and color */
-    padding: 5px; /* Optional: Adjust padding for better appearance */
-}
-
 
 .dashboard_main_logout_div {
     display: flex;
@@ -189,17 +179,6 @@ body {
     }
   }
 
-  .edit_name {
-    background-color: transparent;
-    border: none;
-  }
-
-  .apply_name {
-    border: none;
-    background-color: #2B3674;
-    color: #ffffff;
-    border-radius: 5px;
-  }
   
   .temp_r_y_b_alert_box_div {
     border: 2px solid rgb(241, 98, 98);

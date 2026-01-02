@@ -1,164 +1,114 @@
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
-    <meta charset="UTF-8">
-    <title>IntelliZENS Light</title>
-    <style>
-        * {
-            box-sizing: border-box;
-            font-family: "Segoe UI", sans-serif;
-        }
+  <meta charset="UTF-8" />
+  <title>Smart Lighting Dashboard</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
-        body {
-            background: #111;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            height: 100vh;
-        }
+  <!-- Chart.js CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
-        .container {
-            width: 900px;
-            background: #bfbfbf;
-            border-radius: 14px;
-            padding: 20px;
-        }
-
-        .header {
-            background: #d1a485;
-            color: #000;
-            display: inline-block;
-            padding: 8px 16px;
-            border-radius: 8px;
-            font-weight: bold;
-            margin-bottom: 20px;
-        }
-
-        .panel {
-            display: flex;
-            gap: 20px;
-        }
-
-        .master {
-            flex: 2;
-            background: #c9c9c9;
-            border-radius: 20px;
-            padding: 40px;
-            text-align: center;
-        }
-
-        .master h2 {
-            letter-spacing: 3px;
-            margin-bottom: 8px;
-        }
-
-        .master p {
-            font-size: 13px;
-            color: #444;
-        }
-
-        .toggle-wrapper {
-            margin-top: 40px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 10px;
-        }
-
-        .lights {
-            flex: 3;
-            display: grid;
-            grid-template-columns: repeat(2, 1fr);
-            gap: 20px;
-        }
-
-        .light-card {
-            background: #c9c9c9;
-            border-radius: 20px;
-            padding: 30px;
-            text-align: center;
-        }
-
-        .light-card h4 {
-            margin-bottom: 20px;
-        }
-
-        /* TOGGLE SWITCH */
-        .switch {
-            position: relative;
-            display: inline-block;
-            width: 52px;
-            height: 28px;
-        }
-
-        .switch input {
-            opacity: 0;
-            width: 0;
-            height: 0;
-        }
-
-        .slider {
-            position: absolute;
-            cursor: pointer;
-            background-color: #999;
-            border-radius: 30px;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            transition: 0.3s;
-        }
-
-        .slider:before {
-            content: "";
-            position: absolute;
-            height: 22px;
-            width: 22px;
-            left: 4px;
-            bottom: 3px;
-            background-color: #e5e5e5;
-            border-radius: 50%;
-            transition: 0.3s;
-        }
-
-        input:checked+.slider {
-            background-color: #555;
-        }
-
-        input:checked+.slider:before {
-            transform: translateX(24px);
-        }
-    </style>
+ 
 </head>
-
 <body>
 
-  
+<div class="container">
 
-    <script>
-        const masterSwitch = document.getElementById("masterSwitch");
-        const lightSwitches = document.querySelectorAll(".lightSwitch");
+  <!-- LEFT CARD -->
+  <div class="device-card">
+    <div class="device-header">
+      <div class="device-title">tubeFOBF05 (48W)</div>
+      <label class="switch">
+        <input type="checkbox" id="masterSwitch" checked />
+        <span class="slider-switch"></span>
+      </label>
+    </div>
 
-        // Master controls all lights
-        masterSwitch.addEventListener("change", () => {
-            lightSwitches.forEach(sw => {
-                sw.checked = masterSwitch.checked;
-            });
-        });
+    <div class="label">Light Intensity</div>
+    <div class="intensity-box" id="intensityBox"></div>
 
-        // Individual light update master state
-        lightSwitches.forEach(sw => {
-            sw.addEventListener("change", () => {
-                const allOn = [...lightSwitches].every(s => s.checked);
-                const allOff = [...lightSwitches].every(s => !s.checked);
+    <input type="range" id="intensity" min="0" max="100" value="100" />
+    <div class="percent"><span id="intensityValue">100</span>%</div>
 
-                if (allOn) masterSwitch.checked = true;
-                if (allOff) masterSwitch.checked = false;
-            });
-        });
+    <div class="consumption">
+      <span>Power Consumption</span>
+      <span><span id="power">184.40</span> Wh</span>
+    </div>
+  </div>
 
-    </script>
+  <!-- RIGHT PANEL -->
+  <div class="dashboard">
+    <div class="dashboard-header">
+      <div class="saving">Power Savings : <span id="saving">55.60</span> Wh</div>
+      <div class="label">Today • Power Consumption</div>
+    </div>
+
+    <canvas id="powerChart" height="120"></canvas>
+  </div>
+
+</div>
+
+<script>
+  const intensitySlider = document.getElementById('intensity');
+  const intensityValue = document.getElementById('intensityValue');
+  const intensityBox = document.getElementById('intensityBox');
+  const powerText = document.getElementById('power');
+  const savingText = document.getElementById('saving');
+  const masterSwitch = document.getElementById('masterSwitch');
+
+  const MAX_POWER = 48; // W
+
+  // Chart
+  const ctx = document.getElementById('powerChart');
+  const chart = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: ['8:00', '9:00', '10:00', '11:00', '12:00'],
+      datasets: [{
+        label: 'Power Consumption (Wh)',
+        data: [24, 44, 42, 44, 20],
+        backgroundColor: '#0d2b6b',
+        borderRadius: 8
+      }]
+    },
+    options: {
+      responsive: true,
+      plugins: {
+        legend: { display: false }
+      },
+      scales: {
+        y: {
+          beginAtZero: true,
+          grid: { color: '#e5e7eb' }
+        },
+        x: {
+          grid: { display: false }
+        }
+      }
+    }
+  });
+
+  function updateUI() {
+    const intensity = masterSwitch.checked ? intensitySlider.value : 0;
+
+    intensityValue.textContent = intensity;
+    intensityBox.style.opacity = intensity / 100;
+
+    const power = ((intensity / 100) * MAX_POWER * 3.84).toFixed(2);
+    powerText.textContent = power;
+
+    const saving = (240 - power).toFixed(2);
+    savingText.textContent = saving;
+
+    chart.data.datasets[0].data = chart.data.datasets[0].data.map(v => Math.round(v * intensity / 100));
+    chart.update();
+  }
+
+  intensitySlider.addEventListener('input', updateUI);
+  masterSwitch.addEventListener('change', updateUI);
+
+  updateUI();
+</script>
+
 </body>
-
 </html>

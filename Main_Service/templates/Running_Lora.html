@@ -1,0 +1,635 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Lighting Control Dashboard</title>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap"
+    rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+  <style>
+    :root {
+      --bg-color: #F4F7FE;
+      --card-bg: #FFFFFF;
+      --primary-blue: #1B2559;
+      --accent-blue: #4318FF;
+      --secondary-blue: #707EAE;
+      --status-green: #05CD99;
+      --status-orange: #FFB547;
+      --border-color: #E2E8F0;
+    }
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      font-family: 'Plus Jakarta Sans', sans-serif;
+    }
+
+    body {
+      background-color: var(--bg-color);
+      display: flex;
+      /* Sidebar ke liye layout */
+    }
+
+    /* Dashboard Wrapper - Takes remaining space after Navbar */
+    /* Dashboard Wrapper */
+    .dashboard-content {
+      flex-grow: 1;
+      padding: 25px;
+      max-width: 100%;
+      overflow-x: hidden;
+
+      /* Navbar ki width ke hisab se yahan margin set karein */
+      /* Agar aapka navbar 250px ka hai, toh margin-left bhi 250px hoga */
+      margin-left: 260px;
+
+      transition: all 0.3s ease;
+      /* Smooth transition jab screen resize ho */
+    }
+
+
+    /* Card specific styling for Professional Look */
+.light-card {
+    background-color: #fdfdfd !important; /* Specific Gray from your ref image */
+    border-radius: 22px !important;
+    border: 1px solid #3f3f3f !important;
+    padding: 22px !important;
+    color: #2942be !important;
+   
+}
+
+.card-head h3 { font-size: 18px; font-weight: 700; margin: 0; }
+.card-head span { font-size: 12px; color: #707EAE; }
+
+/* Control Row for Auto Motion & Brightness */
+.sensor-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    margin: 15px 0;
+}
+
+.sensor-box {
+    background: rgba(255, 255, 255, 0.3);
+    padding: 10px;
+    border-radius: 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+}
+
+.sensor-box span {
+    font-size: 11px;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+}
+
+/* Intensity and Lux Styling */
+.input-label {
+    display: flex;
+    justify-content: space-between;
+    font-size: 13px;
+    font-weight: 700;
+    margin-bottom: 5px;
+}
+
+.intensity-container {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 15px;
+}
+
+.v-indicator {
+    width: 45px;
+    height: 70px;
+    background: #BDC3C9;
+    border-radius: 10px;
+}
+
+/* Lux Section - Highlighted Box */
+.lux-section {
+    background: rgba(255, 255, 255, 0.4);
+    padding: 12px;
+    border-radius: 16px;
+    margin-top: 10px;
+}
+
+/* Professional Range Sliders */
+input[type=range] {
+    -webkit-appearance: none;
+    width: 100%;
+    background: transparent;
+}
+
+input[type=range]::-webkit-slider-runnable-track {
+    width: 100%;
+    height: 6px;
+    background: #BDC3C9;
+    border-radius: 3px;
+}
+
+input[type=range]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    height: 16px;
+    width: 16px;
+    border-radius: 50%;
+    background: #FFFFFF;
+    border: 2px solid #1B2559;
+    margin-top: -5px;
+}
+
+    /* Mobile Responsive: Jab screen choti ho toh margin hat jaye */
+    @media (max-width: 991px) {
+      .dashboard-content {
+        margin-left: 0;
+        padding: 15px;
+      }
+    }
+
+    .header-text h1 {
+      font-size: 28px;
+      color: var(--primary-blue);
+      font-weight: 700;
+    }
+
+    .header-text p {
+      color: var(--secondary-blue);
+      margin-bottom: 25px;
+    }
+
+    /* Top Stats Cards */
+    .stats-container {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 20px;
+      margin-bottom: 30px;
+    }
+
+    .stat-card {
+      background: var(--card-bg);
+      padding: 20px;
+      border-radius: 20px;
+      text-align: center;
+      box-shadow: 14px 17px 40px 4px rgba(112, 144, 176, 0.08);
+    }
+
+    .stat-card .label {
+      color: var(--secondary-blue);
+      font-size: 14px;
+      margin-bottom: 8px;
+      font-weight: 500;
+    }
+
+    .stat-card .value {
+      color: var(--primary-blue);
+      font-size: 26px;
+      font-weight: 700;
+    }
+
+    .wh-value {
+      color: var(--status-orange) !important;
+    }
+
+    /* RTU Floor Section */
+    .rtu-section {
+      background: var(--card-bg);
+      border-radius: 20px;
+      margin-bottom: 20px;
+      box-shadow: 14px 17px 40px 4px rgba(112, 144, 176, 0.08);
+      overflow: hidden;
+    }
+
+    .rtu-header {
+      padding: 20px 25px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      cursor: pointer;
+      border-bottom: 1px solid transparent;
+      transition: 0.3s;
+    }
+
+    .rtu-header:hover {
+      background: #fcfdfe;
+    }
+
+    .rtu-header.active {
+      border-bottom: 1px solid var(--border-color);
+    }
+
+    .rtu-info {
+      display: flex;
+      align-items: center;
+      gap: 15px;
+    }
+
+    .rtu-icon-box {
+      width: 45px;
+      height: 45px;
+      background: #F4F7FE;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 12px;
+      color: var(--accent-blue);
+      font-size: 20px;
+    }
+
+    .rtu-stats-summary {
+      text-align: right;
+    }
+
+    .rtu-stats-summary .lights-count {
+      color: var(--accent-blue);
+      font-weight: 700;
+    }
+
+    /* Dynamic Lights Grid - Professional Card Layout */
+    .lights-grid {
+      display: none;
+      /* JS se toggle hoga */
+      grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+      gap: 20px;
+      padding: 25px;
+      background: #FAFBFF;
+    }
+
+    .light-card {
+      background: white;
+      padding: 20px;
+      border-radius: 16px;
+      border: 1px solid var(--border-color);
+      transition: transform 0.2s;
+    }
+
+    .light-card:hover {
+      transform: translateY(-5px);
+      box-shadow: 0 10px 20px rgba(0, 0, 0, 0.05);
+    }
+
+    .card-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 20px;
+    }
+
+    .light-title {
+      color: var(--primary-blue);
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    /* iOS Style Switch */
+    .switch {
+      position: relative;
+      display: inline-block;
+      width: 44px;
+      height: 24px;
+    }
+
+    .switch input {
+      opacity: 0;
+      width: 0;
+      height: 0;
+    }
+
+    .slider {
+      position: absolute;
+      cursor: pointer;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background-color: #cbd5e0;
+      transition: .4s;
+      border-radius: 34px;
+    }
+
+    .slider:before {
+      position: absolute;
+      content: "";
+      height: 18px;
+      width: 18px;
+      left: 3px;
+      bottom: 3px;
+      background-color: white;
+      transition: .4s;
+      border-radius: 50%;
+    }
+
+    input:checked+.slider {
+      background-color: var(--primary-blue);
+    }
+
+    input:checked+.slider:before {
+      transform: translateX(20px);
+    }
+
+    /* Intensity Slider Styling */
+    .intensity-control {
+      margin-top: 15px;
+    }
+
+    .range-label {
+      display: flex;
+      justify-content: space-between;
+      font-size: 13px;
+      color: var(--secondary-blue);
+      margin-bottom: 8px;
+    }
+
+    input[type=range] {
+      -webkit-appearance: none;
+      width: 100%;
+      background: transparent;
+    }
+
+    input[type=range]::-webkit-slider-runnable-track {
+      width: 100%;
+      height: 8px;
+      background: #E9EDF7;
+      border-radius: 10px;
+    }
+
+    input[type=range]::-webkit-slider-thumb {
+      height: 18px;
+      width: 18px;
+      border-radius: 50%;
+      background: var(--accent-blue);
+      -webkit-appearance: none;
+      margin-top: -5px;
+      cursor: pointer;
+      box-shadow: 0 3px 6px rgba(0, 0, 0, 0.1);
+    }
+
+    .power-info {
+      margin-top: 15px;
+      padding-top: 15px;
+      border-top: 1px solid #F4F7FE;
+      display: flex;
+      justify-content: space-between;
+      font-size: 13px;
+    }
+
+    @media (max-width: 768px) {
+      .lights-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+
+<body>
+
+  <!-- MOBILE HAMBURGER -->
+    <button class="btn btn-primary d-lg-none m-2" onclick="toggleMobileSidebar()">
+        <i class="fa-solid fa-bars"></i>
+    </button>
+
+    <!-- SIDEBAR -->
+    {% include 'navbar.html' %}
+
+  <div class="dashboard-content">
+    <div class="header-text">
+      <h1>Lighting Control Dashboard</h1>
+      <p>Manage and monitor your RTU lighting systems in real-time.</p>
+    </div>
+
+    <div class="stats-container">
+      <div class="stat-card">
+        <div class="label">Total RTUs</div>
+        <div class="value">3</div>
+      </div>
+      <div class="stat-card">
+        <div class="label">Total Lights</div>
+        <div class="value">9</div>
+      </div>
+      <div class="stat-card">
+        <div class="label">Lights On</div>
+        <div class="value" style="color: var(--status-green);">7</div>
+      </div>
+      <div class="stat-card">
+        <div class="label">Total Energy</div>
+        <div class="value wh-value">1817 Wh</div>
+      </div>
+    </div>
+
+    <div id="rtu-list-container">
+    </div>
+  </div>
+
+  <!-- <script>
+    // Professional Data Structure
+    const dashboardData = [
+      {
+        floorName: "Building A - Floor 1",
+        rtuId: "RTU-001",
+        totalWh: "1024.90 Wh",
+        lights: [
+          { id: 'tubeFOBF05', power: '48W', intensity: 57, wh: 364.15, status: true },
+          { id: 'tubeFOBF06', power: '48W', intensity: 85, wh: 312.50, status: true },
+          { id: 'tubeFOBF07', power: '48W', intensity: 100, wh: 348.25, status: true },
+          { id: 'tubeFOBF08', power: '48W', intensity: 20, wh: 10.25, status: false }
+        ]
+      },
+      {
+        floorName: "Building A - Floor 2",
+        rtuId: "RTU-002",
+        totalWh: "792.45 Wh",
+        lights: [
+          { id: 'tubeFOBF21', power: '48W', intensity: 70, wh: 200.15, status: true },
+          { id: 'tubeFOBF22', power: '48W', intensity: 40, wh: 150.50, status: true }
+        ]
+      }
+    ];
+
+    function renderDashboard() {
+      const container = document.getElementById('rtu-list-container');
+
+      container.innerHTML = dashboardData.map((floor, index) => `
+                <div class="rtu-section">
+                    <div class="rtu-header" onclick="toggleFloor('floor-${index}', this)">
+                        <div class="rtu-info">
+                            <div class="rtu-icon-box"><i class="fa-solid fa-building"></i></div>
+                            <div>
+                                <div style="font-weight: 700; color: var(--primary-blue);">${floor.floorName}</div>
+                                <div style="font-size: 12px; color: var(--secondary-blue);">RTU ID: ${floor.rtuId}</div>
+                            </div>
+                        </div>
+                        <div class="rtu-stats-summary">
+                            <div class="lights-count">${floor.lights.filter(l => l.status).length}/${floor.lights.length} lights</div>
+                            <div style="font-size: 12px; color: var(--secondary-blue);">${floor.totalWh}</div>
+                        </div>
+                    </div>
+                    
+                    <div id="floor-${index}" class="lights-grid">
+                        ${floor.lights.map(light => `
+                            <div class="light-card">
+                                <div class="card-head">
+                                    <div class="light-title">
+                                        <i class="fa-regular fa-lightbulb" style="color: ${light.status ? '#FFB547' : '#A3AED0'}"></i>
+                                        ${light.id} <span style="font-weight: 400; font-size: 12px; color: var(--secondary-blue);">(${light.power})</span>
+                                    </div>
+                                    <label class="switch">
+                                        <input type="checkbox" ${light.status ? 'checked' : ''}>
+                                        <span class="slider"></span>
+                                    </label>
+                                </div>
+                                
+                                <div class="intensity-control">
+                                    <div class="range-label">
+                                        <span>Light Intensity</span>
+                                        <span style="color: var(--primary-blue); font-weight: 700;">${light.intensity}%</span>
+                                    </div>
+                                    <input type="range" min="0" max="100" value="${light.intensity}">
+                                </div>
+
+                                <div class="power-info">
+                                    <span style="color: var(--secondary-blue);">Power Usage</span>
+                                    <span style="color: var(--primary-blue); font-weight: 600;">${light.wh} Wh</span>
+                                </div>
+                            </div>
+                        `).join('')}
+                    </div>
+                </div>
+            `).join('');
+    }
+
+    function toggleFloor(id, header) {
+      const grid = document.getElementById(id);
+      const allGrids = document.querySelectorAll('.lights-grid');
+
+      // Toggle Logic
+      if (grid.style.display === "grid") {
+        grid.style.display = "none";
+        header.classList.remove('active');
+      } else {
+        grid.style.display = "grid";
+        header.classList.add('active');
+      }
+    }
+
+    // Run on load
+    window.onload = renderDashboard;
+  </script> -->
+
+  <script>
+    const dashboardData = [
+        {
+            floorName: "Building A - Floor 1",
+            rtuId: "RTU-001",
+            totalWh: "1024.90 Wh",
+            lights: [
+                { id: 'HB-Light-05', power: '150W', intensity: 57, lux: 700, status: true, motion: true, brightness: false },
+                { id: 'HB-Light-06', power: '150W', intensity: 85, lux: 500, status: true, motion: true, brightness: true },
+                { id: 'HB-Light-07', power: '150W', intensity: 30, lux: 300, status: false, motion: false, brightness: false }
+            ]
+        }
+    ];
+
+    function renderDashboard() {
+        const container = document.getElementById('rtu-list-container');
+
+        container.innerHTML = dashboardData.map((floor, index) => `
+            <div class="rtu-section">
+                <div class="rtu-header" onclick="toggleFloor('floor-${index}', this)">
+                    <div class="rtu-info">
+                        <div class="rtu-icon-box"><i class="fa-solid fa-building"></i></div>
+                        <div>
+                            <div style="font-weight: 700; color: var(--primary-blue);">${floor.floorName}</div>
+                            <div style="font-size: 12px; color: var(--secondary-blue);">RTU ID: ${floor.rtuId}</div>
+                        </div>
+                    </div>
+                    <div class="rtu-stats-summary">
+                        <div class="lights-count">${floor.lights.filter(l => l.status).length}/${floor.lights.length} lights</div>
+                        <div style="font-size: 12px; color: var(--secondary-blue);">${floor.totalWh}</div>
+                    </div>
+                </div>
+                
+                <div id="floor-${index}" class="lights-grid">
+                    ${floor.lights.map(light => `
+                        <div class="light-card">
+                            <div class="card-head" style="display:flex; justify-content:space-between; margin-bottom:15px;">
+                                <div>
+                                    <h3>${light.id}</h3>
+                                    <span>(${light.power})</span>
+                                </div>
+                                <div style="display:flex; align-items:center; gap:8px;">
+                                    <span style="font-size:11px; font-weight:700;">${light.status ? 'ON' : 'OFF'}</span>
+                                    <label class="switch">
+                                        <input type="checkbox" ${light.status ? 'checked' : ''}>
+                                        <span class="slider"></span>
+                                    </label>
+                                </div>
+                            </div>
+
+                            <div class="sensor-row">
+                                <div class="sensor-box">
+                                    <span><i class="fa-solid fa-person-walking"></i> Motion</span>
+                                    <label class="switch">
+                                        <input type="checkbox" ${light.motion ? 'checked' : ''}>
+                                        <span class="slider"></span>
+                                    </label>
+                                </div>
+                                <div class="sensor-box">
+                                    <span><i class="fa-solid fa-sun"></i> Brightness</span>
+                                    <label class="switch">
+                                        <input type="checkbox" ${light.brightness ? 'checked' : ''}>
+                                        <span class="slider"></span>
+                                    </label>
+                                </div>
+                            </div>
+
+                            <div class="input-label">
+                                <span>Intensity Set</span>
+                                <span>${light.intensity}%</span>
+                            </div>
+                            <div class="intensity-container">
+                                <div class="v-indicator"></div>
+                                <input type="range" min="0" max="100" value="${light.intensity}">
+                            </div>
+
+                            <div class="lux-section">
+                                <div class="input-label" style="color: #1B2559;">
+                                    <span><i class="fa-solid fa-eye" style="margin-right:5px;"></i> Lux Set</span>
+                                    <span>${light.lux} lux</span>
+                                </div>
+                                <input type="range" min="100" max="1000" value="${light.lux}" style="accent-color: #1B2559;">
+                                <div style="display:flex; justify-content:space-between; font-size:10px; color: #707EAE; margin-top:5px;">
+                                    <span>100</span>
+                                    <span>1000</span>
+                                </div>
+                            </div>
+                        </div>
+                    `).join('')}
+                </div>
+            </div>
+        `).join('');
+    }
+
+    function toggleFloor(id, header) {
+        const grid = document.getElementById(id);
+        if (grid.style.display === "grid") {
+            grid.style.display = "none";
+            header.classList.remove('active');
+        } else {
+            grid.style.display = "grid";
+            header.classList.add('active');
+        }
+    }
+
+    window.onload = renderDashboard;
+</script>
+  
+</body>
+
+</html>
