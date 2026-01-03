@@ -8,6 +8,16 @@
     <link href="../static/css/bootstrap.css" rel="stylesheet" />
 
     <style>
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: #F9F9F9;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
+        }
+
         .device-card {
             width: 400px;
             height: 120px;
@@ -83,7 +93,7 @@
     {% include 'navbar.html' %}
 
     <!-- MAIN CONTENT -->
-    <div class="main_content d-flex flex-column min-vh-100">
+    <div class="main_content d-flex flex-column">
 
         <!-- Single Phase Card Dashboard -->
         <div class="btbcard">
@@ -134,15 +144,8 @@
 
             </div>
         </div>
-
-
-        <!-- pls inset footer backend-->
-        <footer class="py-2 mt-auto text-center">
-            <div> Powered By <span>EVOLUZN</span></div>
-        </footer>
-        <!-- pls inset footer backend-->
-
     </div>
+    {% include 'footer.html' %}
     <script src="https://cdn.jsdelivr.net/npm/socket.io-client@4.5.1/dist/socket.io.min.js"></script>
     <script>
         fetch('static/js/ip.json')

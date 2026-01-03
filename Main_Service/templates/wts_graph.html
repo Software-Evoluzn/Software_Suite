@@ -7,8 +7,6 @@
     <title>Thermostate Graph</title>
     <link href="../static/css/bootstrap.css" rel="stylesheet" />
     <link href="../static/css/wts.css" rel="stylesheet" />
-    <link rel="stylesheet" href="../static/css/dashboard.css" />
-
     <link href="../static/css/datepicker.css" rel="stylesheet" />
     <script src="../static/js/chart.js"></script>
     <script src="../static/js/datepicker.js"></script>
@@ -16,10 +14,7 @@
     <script src="../static/js/hammer.js"></script>
     <script src="../static/js/plugin.js"></script>
     <script src="../static/js/alert.js"></script>
-    <script
-        src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation@3.0.1/dist/chartjs-plugin-annotation.min.js"></script>
-
-
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation@3.0.1/dist/chartjs-plugin-annotation.min.js"></script>
 </head>
 
 <body>
@@ -39,7 +34,7 @@
             </a>
         </div>
 
-        <div class="d-flex flex-column min-vh-100">
+        <div class="d-flex flex-column">
             <div class="">
                 <div class="d-flex flex-row gap-4 temp_alert_box_main_div">
                     {% for alert in alertsindivisual %}
@@ -202,16 +197,10 @@
                 </div>
                 <!-- ------------temperature r y b End--------------------- -->
             </div>
-
-
-            <!-- pls inset footer backend -->
-            <footer class="py-2 mt-auto text-center">
-                <div> Powered By <span>EVOLUZN</span></div>
-            </footer>
-            <!-- pls inset footer backend-->
-
         </div>
     </div>
+
+    {% include 'footer.html' %}
 
     <script src="../static/js/socket.io.js"></script>
     <script src="../static/js/temperature.js"></script>

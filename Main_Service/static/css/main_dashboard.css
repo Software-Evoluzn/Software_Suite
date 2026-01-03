@@ -9,13 +9,6 @@ body {
   min-height: 100vh;
 }
 
-.footer {
-  display: flex;
-  justify-content: center;
-  color: #2b3674;
-  margin-top: auto;
-}
-
 .main_content {
   padding: 5px;
   margin-left: 164px;

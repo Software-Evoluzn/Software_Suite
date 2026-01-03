@@ -6,8 +6,17 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>BTB4Channel Dashboard</title>
     <link href="../static/css/bootstrap.css" rel="stylesheet" />
-
     <style>
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: #F9F9F9;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
+        }
+
         .device-card {
             width: 400px;
             height: 120px;
@@ -23,7 +32,6 @@
             display: flex;
             align-items: center;
         }
-
 
         /* Main Content */
         .device-content {
@@ -41,7 +49,6 @@
         .status {
             font-size: 14px;
         }
-
 
         /* Right Side Icons */
         .right {
@@ -62,23 +69,24 @@
             color: #374151;
         }
 
-          .status-ripple {
-  width: 40px;
-  height: 40px;
-  flex-shrink: 0;
-}
+        .status-ripple {
+            width: 40px;
+            height: 40px;
+            flex-shrink: 0;
+        }
 
         @media (max-width:768px) {
             .device-card {
-            width: 350px;
+                width: 350px;
             }
-            
+
             .btbcard {
                 margin-left: 0px;
 
             }
+
             .device-card {
-    height: 90px;
+                height: 90px;
             }
 
             .device-name {
@@ -90,16 +98,16 @@
                 height: 25px;
             }
 
-            .right img{
+            .right img {
                 width: 32px;
                 height: 32px;
             }
 
             .arrow-btn {
-            width: 25px;
-            height: 25px;
-           
-        }
+                width: 25px;
+                height: 25px;
+
+            }
         }
     </style>
 </head>
@@ -117,13 +125,10 @@
     <!-- SIDEBAR -->
     {% include 'navbar.html' %}
 
-
-    <div class="main_content d-flex flex-column min-vh-100">
-
+    <div class="main_content d-flex flex-column">
         <!-- 4 Channel BTB Dashboard -->
         <div class="btbcard">
             <div id="device-container" class="d-flex flex-row flex-wrap p-2 p-md-4 gap-4">
-
                 {% for device_name, panels in device_data.items() %}
                 {% set status = panels.get('status', 'offline') %}
                 <div class="device-card no-warning">
@@ -166,18 +171,12 @@
                     </div>
                 </div>
                 {% endfor %}
-
             </div>
         </div>
-
-
-        <!-- pls inset footer backend-->
-        <footer class="py-2 mt-auto text-center">
-            <div> Powered By <span>EVOLUZN</span></div>
-        </footer>
-        <!-- pls inset footer backend-->
-
     </div>
+
+    {% include 'footer.html' %}
+
     <script src="https://cdn.jsdelivr.net/npm/socket.io-client@4.5.1/dist/socket.io.min.js"></script>
     <script>
         fetch('static/js/ip.json')

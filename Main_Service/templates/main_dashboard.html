@@ -12,20 +12,51 @@
 <body>
 
   <!-- MOBILE HAMBURGER -->
-    <button class="btn btn-primary d-lg-none m-2" onclick="toggleMobileSidebar()">
-        <i class="fa-solid fa-bars"></i>
-    </button>
+  <button class="btn btn-primary d-lg-none m-2" onclick="toggleMobileSidebar()">
+    <i class="fa-solid fa-bars"></i>
+  </button>
 
-    <!-- SIDEBAR -->
-    {% include 'navbar.html' %}
-
+  <!-- SIDEBAR -->
+  {% include 'navbar.html' %}
 
   <div class="main_content">
+    {% if products %}
     <p>Welcome, {{ name }}!</p>
     <h4 class="main_main_heading">Main Dashboard</h4>
+
+    <!-- Content for when products are found -->
+    <div class="p-3 d-flex justify-content-center align-items-center mt-5">
+      <div class="text-center p-4" style="max-width: 500px; width: 100%; border-radius: 10px; margin-top: 5%;">
+        <h4 class="mb-3" style="font-weight: 600; font-size: 1.5rem; color: #333;">
+          Devices Found
+        </h4>
+      </div>
+    </div>
+
+    <!-- Content for when no products are found -->
+    {% else %}
+    <div class="p-3 d-flex justify-content-center align-items-center mt-5">
+      <div class="text-center p-4" style="max-width: 500px; width: 100%; border-radius: 10px; margin-top: 7%;">
+        <div class="">
+          <div class="mb-4">
+            <img src="../static/img/sensor.png" alt="No Devices Icon" height="50">
+          </div>
+          <h4 class=" mb-3" style="font-weight: 600; font-size: 1.5rem; color: #333;">
+            Sorry, No Devices Found
+          </h4>
+          <p style="font-size: 1rem; color: #666;">
+            It looks like your company doesn't have any devices registered. Please contact Evoluzn to add your devices.
+          </p>
+          <a href="/" class="btn btn-primary mt-3" style="font-size: 1rem; padding: 10px 20px; border-radius: 5px;">
+            Contact Evoluzn
+          </a>
+        </div>
+      </div>
+    </div>
+    {% endif %}
+
   </div>
 
-  <footer class="footer">
-    <div class="py-3">Powered by <strong class="ml-1">EVOLUZN</strong></div>
-  </footer>
+  {% include 'footer.html' %}
+
 </body>

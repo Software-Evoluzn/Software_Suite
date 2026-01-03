@@ -71,12 +71,8 @@
         <!-- ******************** -->
 
     </div>
-    <!-- pls inset footer backend-->
-    <footer class="py-2">
-        <div> Powered By <span>EVOLUZN</span></div>
-    </footer>
-    <!-- pls inset footer backend-->
-    <!-- <script src="../static/js/admin.js"></script> -->
+    
+    { % include 'footer.html' % }
     <script>
         const availableProducts = {{ products | tojson | safe }};
         const availableUsers = {{ users | tojson | safe }};
