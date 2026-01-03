@@ -10,6 +10,10 @@ body {
     margin: 0;
     padding: 0;
     background-color: #F9F9F9;
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
 }
 
 .dashboard-header {
@@ -60,7 +64,6 @@ body {
 .main_content {
     padding: 10px 15px;
     margin-left: 164px;
-    min-height: 100vh;
     display: flex;
     flex-direction: column;
 }
@@ -281,13 +284,6 @@ input:checked + .slider:before {
     font-weight: 600;
 }
 
-/* footer */
-footer {
-    font-size: 13px;
-}
-footer span {
-    font-weight: 700;
-}
 
 /* ===== mobile tweaks ===== */
 @media (max-width: 768px) {

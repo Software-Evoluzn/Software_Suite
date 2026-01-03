@@ -31,7 +31,6 @@
       font-family: 'Plus Jakarta Sans', sans-serif;
     }
 
-    /* Sidebar */
     .sidebar {
       position: fixed;
       top: 0;
@@ -51,20 +50,34 @@
     }
 
     .sidebar.collapsed .nav-text,
-    .sidebar.collapsed .logo-text,
+    /* .sidebar.collapsed .logo-text, */
     .sidebar.collapsed .system-status {
       display: none;
     }
 
+    /* Default (expanded) */
+    .sidebar .logo-text img {
+      width: 180px;
+      transition: all 0.3s ease;
+    }
+
+    /* When sidebar is collapsed */
+    .sidebar.collapsed .logo-text img {
+      content: url("../static/img/only_logo.png");
+      width: 30px;
+      /* adjust for icon size */
+    }
+
+
     .sidebar-header {
-      padding: 20px;
+      padding: 16px;
       font-weight: 800;
+      text-align: center;
     }
 
     .nav-links {
       padding: 10px;
       flex: 1;
-      /* ⭐ MOST IMPORTANT LINE */
       overflow-y: auto;
     }
 
@@ -72,7 +85,6 @@
       padding: 12px;
       border-top: 1px solid rgba(255, 255, 255, 0.1);
     }
-
 
     .sidebar-link,
     .theme-toggle {
@@ -94,7 +106,6 @@
       color: white;
     }
 
-    /* When sidebar is collapsed */
     .sidebar.collapsed .sidebar-link,
     .sidebar.collapsed .theme-toggle {
       justify-content: center;
@@ -102,15 +113,12 @@
       padding: 12px;
     }
 
-
-
     .system-status {
       font-size: 12px;
       color: #01b574;
       padding: 10px;
     }
 
-    /* Collapse Button */
     .collapse-btn {
       position: absolute;
       top: 70px;
@@ -123,7 +131,6 @@
       color: white;
     }
 
-    /* Main content spacing */
     .main_content {
       margin-left: 260px;
       transition: 0.3s;
@@ -133,23 +140,20 @@
       margin-left: 80px;
     }
 
-
     @media (max-width: 768px) {
-  .sidebar {
-    transform: translateX(-100%);
-  }
+      .sidebar {
+        transform: translateX(-100%);
+      }
 
-  .sidebar.open {
-    transform: translateX(0);
-  }
+      .sidebar.open {
+        transform: translateX(0);
+      }
 
-  .main_content {
-    margin-left: 0;
-  }
-}
+      .main_content {
+        margin-left: 0;
+      }
+    }
 
-
-    /* Mobile Close Button */
     .mobile-close-btn {
       background: none;
       border: none;
@@ -161,7 +165,6 @@
       cursor: pointer;
     }
 
-    /* Overlay */
     #sidebarOverlay {
       position: fixed;
       inset: 0;
@@ -174,11 +177,6 @@
       display: block;
     }
 
-
-
-
-
-    /* SETTINGS POPOVER */
     .settings-popover {
       position: fixed;
       left: 90px;
@@ -191,7 +189,6 @@
       z-index: 2000;
     }
 
-    /* SHOW */
     .settings-popover.show {
       display: block;
     }
@@ -210,20 +207,17 @@
       color: #1b2559;
     }
 
-    .settings-item a {
+    .settings-popover a {
       text-decoration: none;
       color: #1b2559;
       font-weight: 500;
     }
 
+
     .settings-item:hover {
       background: #e6e6e6;
     }
 
-    .settings-item.logout i,
-    .settings-item.logout a {
-      color: #333;
-    }
 
     /* Divider */
     .settings-popover hr {
@@ -236,6 +230,18 @@
     @media (max-width: 768px) {
       .sidebar.collapsed {
         width: 260px;
+      }
+
+      .nav-links {
+        padding: 5px 10px;
+      }
+
+      .sidebar .logo-text img {
+    width: 150px;
+      }
+
+      .sidebar-header {
+    text-align: left;
       }
 
       .sidebar.collapsed .nav-text,
@@ -270,7 +276,7 @@
 
     <div class="sidebar-header">
       <div class="logo-text">
-        <i class="fa-solid fa-lightbulb"> </i> Software Suite
+        <img id="sidebarLogo" src="../static/img/evoluznlogo_white.png" alt="Logo">
       </div>
     </div>
 
@@ -367,10 +373,12 @@
 
       <!-- SETTINGS POPOVER -->
       <div id="settingsPopover" class="settings-popover">
-        <div class="settings-item">
-          <i class="fa-solid fa-user"></i>
-          <a href="/product_dashboard">Profile</a>
-        </div>
+        <a href="/product_dashboard">
+          <div class="settings-item">
+            <i class="fa-solid fa-user"></i>
+            Profile
+          </div>
+        </a>
 
         <hr>
 
@@ -381,10 +389,12 @@
 
         <hr>
 
-        <div class="settings-item logout">
-          <i class="fa-solid fa-right-from-bracket"></i>
-          <a href="{{ url_for('logout') }}">Logout</a>
-        </div>
+        <a href="{{ url_for('logout') }}">
+          <div class="settings-item logout">
+            <i class="fa-solid fa-right-from-bracket"></i>
+            Logout
+          </div>
+        </a>
       </div>
 
     </div>
@@ -393,7 +403,15 @@
   <script>
     function toggleSidebar() {
       const sidebar = document.getElementById('mainSidebar');
+      const logo = document.getElementById('sidebarLogo');
       sidebar.classList.toggle('collapsed');
+
+      const isCollapsed = sidebar.classList.contains('collapsed');
+
+      logo.src = isCollapsed
+        ? "../static/img/only_logo.png"
+        : "../static/img/evoluznlogo_white.png";
+
       localStorage.setItem('sidebar', sidebar.classList.contains('collapsed'));
     }
 
@@ -424,16 +442,6 @@
       document.getElementById("settingsPopover")?.classList.remove("show");
     });
 
-
-    // window.onload = () => {
-    //   if (localStorage.getItem('sidebar') === 'true') {
-    //     document.getElementById('mainSidebar')?.classList.add('collapsed');
-    //   }
-    //   if (localStorage.getItem('theme') === 'true') {
-    //     document.body.classList.add('dark');
-    //   }
-    // };
-
     window.onload = () => {
       const sidebar = document.getElementById('mainSidebar');
 
@@ -441,7 +449,9 @@
       if (window.innerWidth > 768 && localStorage.getItem('sidebar') === 'true') {
         sidebar.classList.add('collapsed');
       } else {
+        const logo = document.getElementById('sidebarLogo');
         sidebar.classList.remove('collapsed');
+        logo.src = "../static/img/evoluznlogo_white.png";
       }
 
       if (localStorage.getItem('theme') === 'true') {

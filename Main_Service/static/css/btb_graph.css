@@ -7,14 +7,16 @@
 }
 
 body {
-    background: #fff;
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
 }
 
 /* layout with sidebar */
 .main_content {
     margin-left: 164px;
     padding: 10px 15px;
-    min-height: 100vh;
     display: flex;
     flex-direction: column;
 }
@@ -33,7 +35,7 @@ body {
     background: #fff;
     border-radius: 12px;
     padding: 15px 20px;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
 }
 
 /* header (title + button) */

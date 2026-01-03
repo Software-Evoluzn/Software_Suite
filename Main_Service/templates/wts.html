@@ -7,6 +7,13 @@
     <title>Dashboard</title>
     <link href="../static/css/bootstrap.css" rel="stylesheet" />
     <style>
+        body {
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
+        }
+
         .device-card {
             width: 400px;
             height: 120px;
@@ -80,7 +87,7 @@
 </head>
 
 <body>
-     <!-- MOBILE HAMBURGER -->
+    <!-- MOBILE HAMBURGER -->
     <div class="d-block d-md-none">
         <button class="btn btn-primary d-lg-none m-2" onclick="toggleMobileSidebar()">
             <i class="fa-solid fa-bars"></i>
@@ -92,7 +99,7 @@
     <!-- SIDEBAR -->
     {% include 'navbar.html' %}
 
-    <div class="main_content d-flex flex-column min-vh-100">
+    <div class="main_content d-flex flex-column">
         <div>
             {# -------- PREPARE ALERT DEVICE NAME SAFELY -------- #}
             {% if alerts and alerts[0].device_name %}
@@ -210,14 +217,9 @@
 
             </div>
         </div>
-
-        <!-- pls inset footer backend-->
-        <footer class="py-2 mt-auto text-center">
-            <div> Powered By <span>EVOLUZN</span></div>
-        </footer>
-        <!-- pls inset footer backend-->
-
     </div>
+
+    {% include 'footer.html' %}
     <script src="../static/js/socket.io.js"></script>
     <script>
         fetch('static/js/ip.json')

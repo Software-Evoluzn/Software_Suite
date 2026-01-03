@@ -332,12 +332,11 @@ function setupSocketConnection(ip) {
                 }
 
                 // Find all phase sensor blocks in this panel
-                const sensorBlocks = panelContainer.querySelectorAll('.lux_graph_level_indv_div');
+                const sensorBlocks = panelContainer.querySelectorAll('.temp_graph_level_indv_div');
 
                 sensorBlocks.forEach(block => {
-                    const sensorTitle = block.querySelector('.lux_graph_level_title_img_main_div h4');
-                    const sensorValueDiv = block.querySelector('.lux_graph_level_temp_value_div');
-
+                    const sensorTitle = block.querySelector('.temp_graph_level_title_img_main_div h4');
+                    const sensorValueDiv = block.querySelector('.temp_graph_level_temp_value_div');
                     if (!sensorTitle || !sensorValueDiv) return;
                     const sensorName = sensorTitle.innerText.trim();  // e.g., 'R1', 'Y1', 'B1', 'N'
                     const newValue = sensors[sensorName];  // Get the corresponding value from the sensors data

@@ -30,6 +30,8 @@ document.addEventListener('DOMContentLoaded', function () {
     document.getElementById("fileUpload").addEventListener("change", function (event) {
         if (event.target.files && event.target.files[0]) {
             document.getElementById("profileImg").src = URL.createObjectURL(event.target.files[0]);
+
+            document.getElementById("uploadForm").submit();
         }
     });
 

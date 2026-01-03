@@ -12,6 +12,7 @@ body {
 }
 
 .main_content {
+    padding: 0 20px;
     margin-left: 164px;
 }
 
@@ -38,6 +39,14 @@ body {
     height: 40px;
 }
 
+.dashboard_temp_min_max_main_div {
+    display: flex;
+    justify-content: space-between;
+    gap: 15px;
+    align-items: center;
+    flex-wrap: wrap;
+
+}
 
 .temp_start_end_div {
     background-color: #DFE6FF;
@@ -144,12 +153,184 @@ body {
     font-weight: 600;
 }
 
-/* ================= FOOTER ================= */
-footer {
-    font-size: 14px;
-    color: #474F7D;
+/* ================= DASHBOARD TEMPERATURE SENSOR ================= */
+
+.dashboard_temp_sensor_indv_div {
+    height: fit-content;
+    display: flex;
+    flex-direction: column;
+    transition: 0.3s;
+    text-decoration: none;
+    gap: 5px;
+    background-color: #FFFFFF;
+    box-shadow: 0px 4px 10px #EBEBEB;
+    /* Soft drop shadow */
+    border-radius: 13px;
 }
 
-footer span {
+
+.control_panel_edit {
+    font-size: 1.5em;
+    font-weight: bold;
+    outline: none;
+    color: #2B3674;
+    border-radius: 5px;
+    border: 1px solid #ccc;
+    /* Adjust thickness and color */
+    padding: 5px;
+    /* Optional: Adjust padding for better appearance */
+}
+
+
+.dashboard_temp_R_title {
+    color: #FF0000;
+}
+
+.dashboard_temp_Y_title {
+    color: #FFCC00;
+}
+
+.dashboard_temp_B_title {
+    color: #0084FF;
+}
+
+.dashboard_temp_N_title {
+    color: #0a0a0a;
+}
+
+.dashboard_temp_min_max_main_div {
+    display: flex;
+    justify-content: space-between;
+    gap: 15px;
+    align-items: center;
+    flex-wrap: wrap;
+
+}
+
+.dashboard_temp_min_div {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    color: #405678;
+}
+
+.dashboard_temp_min_value_div {
+    color: #4D60CD;
+    font-weight: 700;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.dashboard_temp_avg_value_div {
+    font-size: 40px;
+    font-weight: 700;
+    color: #2B3674;
+}
+
+.dashboard_temp_max_div {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    color: #405678;
+}
+
+.dashboard_temp_max_value_div {
+    color: #4D60CD;
+    font-weight: 700;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.edit_name {
+    background-color: transparent;
+    border: none;
+}
+
+.apply_name {
+    border: none;
+    background-color: #2B3674;
+    color: #ffffff;
+    border-radius: 5px;
+}
+
+.temp_r_y_b_alert_box_div {
+    border: 2px solid rgb(241, 98, 98);
+    border-radius: 8px;
+    min-width: 350px;
+
+}
+
+.temp_r_y_b_alert_box_title {
+    color: rgb(241, 98, 98);
     font-weight: 600;
+    font-size: 30px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 10px;
+}
+
+.temp_r_y_b_alert_box_description {
+    color: #2b3674;
+    font-weight: 500;
+    font-size: 23px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+
+/* ********************************* */
+.temp_alert_box_main_div {
+    overflow: auto;
+    scrollbar-width: thin;
+    scrollbar-color: #5c77d8 transparent;
+    padding-top: 10px;
+    padding-bottom: 10px;
+    padding-right: 10px;
+    display: flex;
+    flex-direction: row;
+    gap: 20px;
+}
+
+.temp_alert_box_main_div::-webkit-scrollbar {
+    height: 5px;
+}
+
+.temp_alert_box_main_div::-webkit-scrollbar-thumb {
+    background-color: #5c77d8;
+    border-radius: 10px;
+}
+
+.temp_alert_box_main_div::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+/* ********************************* */
+
+.temp_alert_box_close {
+    height: 30px;
+    cursor: pointer;
+}
+
+.temp_alert_icon {
+    height: 30px;
+
+}
+
+.temp_alert_time {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    color: #919191;
+    font-weight: 600;
+}
+
+.temp_annotation_div {
+    display: flex;
+    flex-direction: row;
+    gap: 5px;
+    flex-wrap: wrap;
 }

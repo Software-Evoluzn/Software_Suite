@@ -193,15 +193,6 @@ input::-ms-clear {
     color: #2B3674;
 }
 
-footer {
-    color: #474F7D;
-    margin-top: auto;
-}
-
-footer span {
-    font-weight: bold;
-}
-
 .toggle_eye {
     top: 68% !important;
     cursor: pointer;
