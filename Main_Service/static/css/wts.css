@@ -23,16 +23,18 @@ body {
 }
 
 /* ================= COMMON ================= */
-.temperature_dashboard_title,
-.graph_main_heading {
+.temperature_dashboard_title{
     color: #2B3674;
     font-weight: 600;
     font-size: 25px;
     text-align: center;
+    margin: auto;
 }
 
 .graph_main_heading {
-    text-align: left;
+    color: #2B3674;
+    font-weight: 600;
+    font-size: 25px;
 }
 
 .evoluzn_logo {
@@ -49,12 +51,18 @@ body {
 }
 
 .temp_start_end_div {
-    background-color: #DFE6FF;
     border-radius: 5px;
     color: #2b3674;
     font-weight: 600;
-    border: none;
+    border: 1px solid #B9B9B9;
     padding: 5px 10px;
+}
+
+.temp_annotation_div button,
+.dateRangeContainer_css_temp_r_y_b button{
+    background-color: #0069E1;
+    color: white;
+    border: none;
 }
 
 /* ================= EDIT PANEL ================= */
@@ -84,14 +92,14 @@ body {
 
 /* ================= CARDS ================= */
 .temp_main_div,
-.main_graph_div,
-.temp_graph_level_indv_div {
+.main_graph_div {
     background-color: #ffffff;
-    border-radius: 15px;
+
 }
 
 .temp_graph_level_indv_div {
     padding: 15px;
+    border-radius: 15px;
     box-shadow: 0px 4px 10px #EBEBEB;
     border: 1px solid #474F7D;
 }
@@ -276,7 +284,7 @@ body {
     color: #2b3674;
     font-weight: 500;
     font-size: 23px;
-    display: flex;
+    display: hidden;
     justify-content: center;
     align-items: center;
 }

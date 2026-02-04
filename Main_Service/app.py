@@ -34,9 +34,9 @@ sid_to_email = {}
 # ======================= MicroService Connection Start ========================
 micro_client = socketio_client.Client()
 
-LMS_Lora_URL = 'http://192.168.1.20:5002'
-Measurement_Mqtt_URL = 'http://192.168.1.20:5003'
-Safety_Mqtt_URL = 'http://192.168.1.34:5004'
+LMS_Lora_URL = 'http://192.168.1.13:5002'
+Measurement_Mqtt_URL = 'http://192.168.1.35:5003'
+Safety_Mqtt_URL = 'http://192.168.1.35:5004'
 
 try:
     micro_client.connect(LMS_Lora_URL)
@@ -189,6 +189,7 @@ def create_tables():
             user_access VARCHAR(255) NOT NULL  ,
             connection_type VARCHAR(50) NOT NULL DEFAULT 'mqtt',
             graph_duration INT DEFAULT 60,
+            device_location VARCHAR(255),
             inserttimestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP                   
         );
     """)
@@ -253,6 +254,18 @@ def create_tables():
     );
 '''
 
+    smoke_table_query = '''
+    CREATE TABLE IF NOT EXISTS smoke_device (
+        device_name VARCHAR(100),
+        device_type VARCHAR(50) DEFAULT 'smoke',
+        online_status ENUM('online','offline') DEFAULT 'offline',
+        smoke_active TINYINT(1) DEFAULT 0,
+        last_seen DATETIME,
+        smoke_detected_at DATETIME,
+        reset_at DATETIME
+    );
+    '''
+
     # ALTER TABLE alert_temp ADD UNIQUE unique_index (device_name, timestamp)
     conn.commit()
 
@@ -270,6 +283,7 @@ def create_tables():
         cursor.execute(product_query)
         cursor.execute(product_details_query)
         cursor.execute(lms_lora_table_query)
+        cursor.execute(smoke_table_query)
         conn.commit()
         print("Tables created successfully.")
     except mysql.connector.Error as err:
@@ -392,12 +406,6 @@ def connect_mqtt():
         print(f"❌ Exception occurred during connection: {e}")
 
     return client
-
-
-def on_disconnect(client, userdata, rc):
-    if rc != 0:
-        print("Disconnected from MQTT broker. Trying to reconnect...")
-        mqttc.reconnect()
 
 def on_message(client, userdata, message):
     # print(f"Received message on topic {message.topic}: {message.payload}")
@@ -974,6 +982,9 @@ def wtstempsync():
         device_data = micro_data['device_data']
         result_data = micro_data['result']
         alerts = micro_data['alerts']
+        
+        for alert in alerts:
+            alert['device_name'] = alert.pop('serial_number', None)
 
         print("micro_data Data", micro_data)
 
@@ -1045,6 +1056,12 @@ def temperature(device_id):
         device_id = micro_data['device_id']
         device_data = micro_data['device_data']
         alertsindivisual = micro_data['alertsindivisual']
+
+        for alert in alertsindivisual:
+            alert['timestamp'] = datetime.strptime(
+                alert['timestamp'],
+                "%a, %d %b %Y %H:%M:%S GMT"
+            )
         result = micro_data['result']
 
         return render_template(
@@ -1093,6 +1110,36 @@ def delete_alert():
         print(f"Error forwarding to microservice: {e}")
         return jsonify({"error": "Failed to reach microservice", "details": str(e)}), 500
 
+@app.route('/save_alert_action', methods=['POST'])
+def save_alert_action():
+    data = request.get_json()
+
+    if not data:
+        return jsonify({"status": "error", "message": "Invalid JSON"}), 400
+
+    try:
+        response = requests.post(
+            f"{Safety_Mqtt_URL}/save_alert_action",
+            json=data,
+            timeout=5
+        )
+
+        if response.status_code == 200:
+            return jsonify(response.json()), 200
+
+        return jsonify({
+            "status": "error",
+            "message": "Microservice failed",
+            "details": response.text
+        }), response.status_code
+
+    except requests.exceptions.RequestException as e:
+        print("Microservice connection error:", e)
+        return jsonify({
+            "status": "error",
+            "message": "Microservice unreachable"
+        }), 503
+
 
 # === SOCKET.IO FOR DASHBOARD FRONTEND ===
 @socketio.on('connect')
@@ -1119,7 +1166,7 @@ def handle_micro_data(data):
 
 @socketio.on('temperature_graph_data')
 def temperature_graph_data(data):
-    print("Received temperature graph data:", data )
+    # print("Received temperature graph data:", data )
     email = data.get('email')
     sid = request.sid  # Grab actual request SID
     sid_to_email[sid] = email
@@ -1138,11 +1185,64 @@ def handle_micro_data(data):
 @micro_client.on('micro_new_alert')
 def handle_alert_data(data):
     print("[Main] Received alert data from microservice:", data)
+    data["device_name"] = data.pop("serial_number", None)
     socketio.emit('new_alert', data)
+
+
+@micro_client.on('micro_smoke_alert')
+def handle_smoke_alert_data(data):
+    print("xhjjh")
+    print("[Main] Received smoke alert data from microservice:", data)
+    socketio.emit('smoke_alert', data)
 
 @micro_client.event
 def disconnect():
     print("[Main] Disconnected from Microservice")
+
+
+
+@app.route('/rename-device', methods=['POST'])
+def rename_device():
+    try:
+        data = request.get_json()
+
+        print("Rename device data received:", data)
+
+        device_name = data.get('device_name')
+        device_location = data.get('device_location')
+
+        if not device_name or not device_location:
+            return jsonify({
+                "success": False,
+                "message": "Invalid data"
+            }), 400
+
+        conn = connect_db()
+        cursor = conn.cursor()
+
+        query = """
+            UPDATE product_details
+            SET device_location = %s
+            WHERE serial_number = %s
+        """
+        cursor.execute(query, (device_location, device_name))
+
+        conn.commit()
+
+        cursor.close()
+        conn.close()
+
+        return jsonify({
+            "success": True,
+            "message": "Device renamed successfully"
+        })
+
+    except Exception as e:
+        return jsonify({
+            "success": False,
+            "error": str(e)
+        }), 500
+
 
 # ======================= WTS Microservice Integration END =======================
 
@@ -1549,8 +1649,8 @@ def intellizens_control(data):
 # ======================= Intellizens Microservice Integration End ======================
 
 # ======================= MicroService For Running (Tubelight) Light  START ========================
-@app.route('/running_lora', methods=['GET'])
-def running_lora():
+@app.route('/rtu', methods=['GET'])
+def rtu():
     result = get_user_name_from_token()
     company_name = result.get('company_name')
     user_name = result.get('username')
@@ -1638,12 +1738,12 @@ def running_lora():
     conn.close()
 
     return render_template(
-        "Running_Lora.html",
+        "Rtu.html",
         running_data=running_data
     )
 
-@socketio.on("running_lora_control")
-def running_lora_control(data):
+@socketio.on("rtu_control")
+def rtu_control(data):
     try:
         master_id = data.get("master_id")
         slave_id = data.get("slave_id")
@@ -1715,12 +1815,64 @@ def running_lora_control(data):
     except Exception as e:
         print("❌ Control error:", e)
         socketio.emit(
-            "running_lora_error",
+            "rtu_error",
             {"error": str(e)},
             room=request.sid
         )
 
 # ======================= MicroService For Running (Tubelight) Light END ========================
+
+# ======================= MicroService For Smoke Detector END ========================
+@app.route('/smokeDetector', methods=['GET'])
+def smokeDetector():
+    result = get_user_name_from_token()
+    company_name = result.get('company_name')
+    user_name = result.get('username')
+
+    try:
+        response = requests.get(
+            f"{Safety_Mqtt_URL}/smokeDetector",
+            params={
+                "user_name": user_name,
+                "company_name": company_name
+            },
+            timeout=5
+        )
+
+        device_data = response.json() 
+
+        device_data_dict = {
+            d['device']: {
+                'status': d['status'],
+                'alert_detected': d['alert_detected']
+            } for d in device_data
+        }
+
+    except Exception as e:
+        print("❌ Safety service error:", e)
+        device_data_dict = {}
+
+    return render_template(
+        "smokeDetector.html",
+        smokeDetector=device_data_dict
+    )
+
+
+@app.route('/reset-device/<device_id>', methods=['POST'])
+def reset_device(device_id):
+    try:
+        response = requests.post(
+            f"{Safety_Mqtt_URL}/reset-device/{device_id}",
+            timeout=5
+        )
+
+        return jsonify(response.json()), response.status_code
+
+    except Exception as e:
+        print("❌ Safety service down:", e)
+        return jsonify({"error": "Service unavailable"}), 503
+
+# ======================= MicroService For Smoke Detector END ========================
 
 @app.route('/favicon.ico')
 def favicon():

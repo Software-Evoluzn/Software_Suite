@@ -6,7 +6,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>BTB4Channel Dashboard</title>
     <link href="../static/css/bootstrap.css" rel="stylesheet" />
-    <style>
+    <!-- <style>
         body {
             margin: 0;
             padding: 0;
@@ -109,30 +109,195 @@
 
             }
         }
+    </style> -->
+
+    <style>
+        /* MOBILE HEADER */
+        .mobile-header {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 12px;
+            background: #f8fafc;
+            border-bottom: 1px solid #e5e7eb;
+        }
+
+        .mobile-header .title {
+            font-size: 16px;
+            font-weight: 600;
+        }
+
+        /* MAIN CONTENT */
+        .main_content {
+            margin-left: 260px;
+            background: #f1f5f9;
+            min-height: 100vh;
+        }
+
+        /* Mobile + Tablet */
+        @media (max-width: 991px) {
+            .main_content {
+                margin-left: 0;
+            }
+        }
+
+        /* Laptop only */
+        @media (min-width: 992px) {
+            .main_content {
+                margin-left: 260px;
+            }
+        }
+
+        /* SIDEBAR DEFAULT (Laptop) */
+        .sidebar {
+            width: 260px;
+            position: fixed;
+            top: 0;
+            left: 0;
+            height: 100vh;
+            transition: transform 0.3s ease;
+        }
+
+        /* Mobile + Tablet */
+        @media (max-width: 991px) {
+            .sidebar {
+                transform: translateX(-100%);
+                position: fixed;
+                z-index: 1000;
+            }
+
+            .sidebar.active {
+                transform: translateX(0);
+            }
+        }
+
+        @media (max-width: 991px) {
+            body.sidebar-open {
+                overflow: hidden;
+            }
+        }
+
+
+        /* GRID SYSTEM */
+        .device-grid {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 16px;
+        }
+
+        /* Tablet */
+        @media (min-width: 576px) {
+            .device-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+
+        /* Laptop */
+        @media (min-width: 992px) {
+            .device-grid {
+                grid-template-columns: repeat(4, 1fr);
+            }
+        }
+
+        /* DEVICE CARD */
+        .device-card {
+            background: #ffffff;
+            border-radius: 14px;
+            padding: 16px;
+            box-shadow: 0 6px 18px rgba(0, 0, 0, 0.08);
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+
+        .device-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 10px 26px rgba(0, 0, 0, 0.12);
+        }
+
+        /* CONTENT */
+        .device-content {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        /* LEFT */
+        .device-name {
+            font-size: 18px;
+            font-weight: 600;
+            margin-bottom: 4px;
+        }
+
+        .status {
+            font-size: 13px;
+            padding: 4px 10px;
+            border-radius: 999px;
+            font-weight: 500;
+        }
+
+        .status.online {
+            background: #dcfce7;
+            color: #166534;
+        }
+
+        .status.offline {
+            background: #fee2e2;
+            color: #991b1b;
+        }
+
+        /* RIGHT */
+        .right {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .status-ripple {
+            width: 42px;
+            height: 42px;
+        }
+
+        .wifi-icon {
+            width: 26px;
+        }
+
+        /* ARROW */
+        .arrow-btn svg {
+            width: 22px;
+            height: 22px;
+            stroke: #2563eb;
+            stroke-width: 2.4;
+            fill: none;
+        }
     </style>
+
+
 </head>
 
 <body>
-    <!-- MOBILE HAMBURGER -->
-    <div class="d-block d-md-none">
-        <button class="btn btn-primary d-lg-none m-2" onclick="toggleMobileSidebar()">
+    <!-- MOBILE HEADER -->
+    <div class="mobile-header d-lg-none">
+        <button class="btn btn-outline-primary" onclick="toggleMobileSidebar()">
             <i class="fa-solid fa-bars"></i>
         </button>
-
-        BTB4 Channel Dashboard
+        <span class="title">BTB4 Channel Dashboard</span>
     </div>
 
     <!-- SIDEBAR -->
     {% include 'navbar.html' %}
 
-    <div class="main_content d-flex flex-column">
-        <!-- 4 Channel BTB Dashboard -->
-        <div class="btbcard">
-            <div id="device-container" class="d-flex flex-row flex-wrap p-2 p-md-4 gap-4">
+    <!-- MAIN CONTENT -->
+    <div class="main_content">
+        <div class="container-fluid py-3">
+
+            <!-- DEVICE GRID -->
+            <div id="device-container" class="device-grid">
                 {% for device_name, panels in device_data.items() %}
                 {% set status = panels.get('status', 'offline') %}
-                <div class="device-card no-warning">
+
+                <div class="device-card">
                     <div class="device-content">
+
+                        <!-- LEFT -->
                         <div class="left">
                             <h3 class="device-name">{{ device_name }}</h3>
                             <span class="status {{ 'online' if status == 'online' else 'offline' }}">
@@ -140,10 +305,11 @@
                             </span>
                         </div>
 
+                        <!-- RIGHT -->
                         <div class="right">
-                            <!-- Ripple SVG -->
-                            <svg viewBox="0 0 40 40" xmlns="http://www.w3.org/2000/svg"
-                                class="{% if status == 'online' %}ripple-online{% else %}ripple-offline{% endif %} status-ripple">
+                            <!-- Ripple -->
+                            <svg viewBox="0 0 40 40"
+                                class="status-ripple {% if status == 'online' %}ripple-online{% else %}ripple-offline{% endif %}">
                                 <circle cx="20" cy="20" r="6"
                                     fill="{% if status == 'online' %}#10B981{% else %}#EF4444{% endif %}" opacity="0.7">
                                     <animate attributeName="r" from="6" to="18" dur="1.6s" repeatCount="indefinite" />
@@ -154,28 +320,30 @@
                                     fill="{% if status == 'online' %}#10B981{% else %}#EF4444{% endif %}" />
                             </svg>
 
-                            <!-- Wi-Fi images -->
-                            <img src="../static/img/wifi.png" alt="Wi-Fi_Online" class="wifi-online"
-                                style="display: {% if status == 'online' %}inline{% else %}none{% endif %};">
-                            <img src="../static/img/wifi_off.png" alt="Wi-Fi_Offline" class="wifi-offline"
-                                style="display: {% if status != 'online' %}inline{% else %}none{% endif %};">
+                            <!-- WIFI -->
+                            <img src="../static/img/wifi.png" class="wifi-icon"
+                                style="display: {{ 'block' if status == 'online' else 'none' }};">
+                            <img src="../static/img/wifi_off.png" class="wifi-icon"
+                                style="display: {{ 'block' if status != 'online' else 'none' }};">
 
-                            <!-- Arrow Button -->
+                            <!-- ARROW -->
                             <a href="{{ url_for('btb_graph', device_id=device_name) }}" class="arrow-btn">
-                                <svg viewBox="0 0 24 24" fill="none">
-                                    <path d="M9 6l6 6-6 6" stroke="#3b82f6" stroke-width="2.3" stroke-linecap="round"
-                                        stroke-linejoin="round" />
+                                <svg viewBox="0 0 24 24">
+                                    <path d="M9 6l6 6-6 6" />
                                 </svg>
                             </a>
                         </div>
+
                     </div>
                 </div>
                 {% endfor %}
             </div>
+
         </div>
     </div>
 
     {% include 'footer.html' %}
+
 
     <script src="https://cdn.jsdelivr.net/npm/socket.io-client@4.5.1/dist/socket.io.min.js"></script>
     <script>

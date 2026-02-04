@@ -57,7 +57,7 @@
 
     /* Default (expanded) */
     .sidebar .logo-text img {
-      width: 180px;
+      width: 135px;
       transition: all 0.3s ease;
     }
 
@@ -356,11 +356,27 @@
 
       <!-- RUNNING LORA -->
       {% if 'Running Lora' in products %}
-      <a href="/running_lora" class="sidebar-link {% if active_page == 'running_lora' %}active{% endif %}">
+      <a href="/rtu" class="sidebar-link {% if active_page == 'rtu' %}active{% endif %}">
         <i class="fa-solid fa-signal"></i>
         <span class="nav-text">Lora Running</span>
       </a>
       {% endif %}
+
+      <!-- RTU -->
+      {% if 'RTU' in products %}
+      <a href="/rtu" class="sidebar-link {% if active_page == 'rtu' %}active{% endif %}">
+        <i class="fa-solid fa-signal"></i>
+        <span class="nav-text">RTU</span>
+      </a>
+      {% endif %}
+
+      {% if 'smokeDetector' in products %}
+      <a href="/smokeDetector" class="sidebar-link {% if active_page == 'smokeDetector' %}active{% endif %}">
+        <i class="fa-solid fa-signal"></i>
+        <span class="nav-text">Smoke Detector</span>
+      </a>
+      {% endif %}
+
 
     </div>
 

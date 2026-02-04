@@ -132,7 +132,7 @@ applyButton.addEventListener('click', () => {
         errorMessage_threshold.textContent = "";
     }
 
-    fetch('/publish-threshold', {
+    fetch('/publish_threshold', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ value: value, device_id: device_id })
@@ -513,9 +513,6 @@ function setupSocketConnection(ip) {
         const alertHTML = `
         <div class="mt-4 p-1 temp_r_y_b_alert_box_div">
             <div class="alert-box" data-alert-message="${data.message}" data-device-name="${data.device_name}">
-                <div class="d-flex justify-content-end">
-                    <img class="temp_alert_box_close" src="../static/img/alert_cross_close.svg" onclick="deleteAlert(this)">
-                </div>
                 <div class="text-center temp_r_y_b_alert_box_title">
                     <img class="temp_alert_icon" src="../static/img/alert.svg">
                     Alert (${data.exceeded_phases})
@@ -848,8 +845,6 @@ document.getElementById('applyAnnotation').addEventListener('click', function ()
             }
         };
         chart_temp_r_y_b.options.plugins.annotation.annotations = [newAnnotation];
-
-        // console.log("chart_temp_r_y_b.options.plugins.annotation.annotations", chart_temp_r_y_b.options.plugins.annotation.annotations)
 
         chart_temp_r_y_b.update();
     }

@@ -1,0 +1,340 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Smoke Detector Dashboard</title>
+    <link href="../static/css/bootstrap.css" rel="stylesheet" />
+
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: #F9F9F9;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
+        }
+
+        .device-card {
+            width: 400px;
+            height: 120px;
+            background: white;
+            border-radius: 14px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+            font-family: Arial, sans-serif;
+        }
+
+        .device-card.no-warning .device-content {
+            height: 100%;
+            display: flex;
+            align-items: center;
+        }
+
+        /* Main Content */
+        .device-content {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 16px;
+        }
+
+        .device-name {
+            margin: 0;
+            font-size: 18px;
+        }
+
+        .status {
+            font-size: 12px;
+            padding: 6px 14px;
+            border-radius: 20px;
+            color: #fff;
+        }
+
+        /* Right Side Icons */
+        .right {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        /* Arrow Button */
+        .arrow-btn {
+            width: 34px;
+            height: 34px;
+            border-radius: 50%;
+            background: #e5e7eb;
+            border: none;
+            cursor: pointer;
+            font-size: 15px;
+            color: #374151;
+        }
+
+        .status-ripple {
+            width: 40px;
+            height: 40px;
+            flex-shrink: 0;
+        }
+
+        @media (max-width:768px) {
+            .device-card {
+                width: 350px;
+            }
+
+            .btbcard {
+                margin-left: 0px;
+
+            }
+
+            .device-card {
+                height: 90px;
+            }
+
+            .device-name {
+                font-size: 15px;
+            }
+
+            .status-ripple {
+                width: 25px;
+                height: 25px;
+            }
+
+            .right img {
+                width: 32px;
+                height: 32px;
+            }
+
+            .arrow-btn {
+                width: 25px;
+                height: 25px;
+
+            }
+        }
+
+        /* Blink animation */
+        @keyframes blink-alert {
+            0% {
+                background-color: transparent;
+            }
+
+            50% {
+                background-color: rgba(255, 67, 67, 0.3);
+            }
+
+            /* red with opacity */
+            100% {
+                background-color: transparent;
+            }
+        }
+
+        .device-alert-blink {
+            animation: blink-alert 2s infinite;
+            border-radius: 8px;
+        }
+
+        .online {
+            background: #28a745;
+        }
+
+        .offline {
+            background: #dc3545;
+        }
+    </style>
+
+
+</head>
+
+<body>
+    <!-- MOBILE HAMBURGER -->
+    <div class="d-block d-md-none">
+        <button class="btn btn-primary d-lg-none m-2" onclick="toggleMobileSidebar()">
+            <i class="fa-solid fa-bars"></i>
+        </button>
+
+        Smoke Detector Dashboard
+    </div>
+
+    <!-- SIDEBAR -->
+    {% include 'navbar.html' %}
+
+    <div class="main_content d-flex flex-column">
+
+        <!-- Smoke Detector graph -->
+        <div class="btbcard">
+            <div id="device-container" class="d-flex flex-row flex-wrap p-2 p-md-4 gap-4">
+
+                {% for device_id, device in smokeDetector.items() %}
+                <div class="device-card no-warning" data-device="{{ device_id }}">
+                    <div class="device-content">
+                        <div class="left">
+                            <!-- Serial Number -->
+                            <h3 class="device-name" style="margin-bottom: 15px;">{{ device_id }}</h3>
+                            <span class="status {{ 'online' if device.status == 'online' else 'offline' }}">
+                                {{ device.status|capitalize }}
+                            </span>
+                        </div>
+
+                        <div class="right">
+                            <!-- Ripple SVG -->
+                            <svg viewBox="0 0 40 40" xmlns="http://www.w3.org/2000/svg"
+                                class="{% if device.status == 'online' %}ripple-online{% else %}ripple-offline{% endif %} status-ripple">
+                                <circle cx="20" cy="20" r="6"
+                                    fill="{% if device.status == 'online' %}#10B981{% else %}#EF4444{% endif %}"
+                                    opacity="0.7">
+                                    <animate attributeName="r" from="6" to="18" dur="1.6s" repeatCount="indefinite" />
+                                    <animate attributeName="opacity" from="0.7" to="0" dur="1.6s"
+                                        repeatCount="indefinite" />
+                                </circle>
+                                <circle cx="20" cy="20" r="6"
+                                    fill="{% if device.status == 'online' %}#10B981{% else %}#EF4444{% endif %}" />
+                            </svg>
+
+                            <!-- Wi-Fi images -->
+
+                            <!-- <img id="icon-{{ device_id }}" src="../static/img/fire.png" width="50" height="50"
+                                class="wifi-offline" style="display: none;">
+
+                            <img id="icon-online-{{ device_id }}" src="../static/img/fire.png" width="50" height="50"
+                                class="wifi-online" style="display: inline;"> -->
+
+                            <img src="{{ url_for('static', filename='img/Reset.svg') }}" width="50" height="50"
+                                style="cursor:pointer" onclick="resetDevice('{{ device_id }}')">
+
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+
+            </div>
+        </div>
+
+
+    </div>
+
+    {% include 'footer.html' %}
+
+    <script src="https://cdn.jsdelivr.net/npm/socket.io-client@4.5.1/dist/socket.io.min.js"></script>
+   <script>
+
+fetch('static/js/ip.json')
+.then(response => response.json())
+.then(data => {
+
+    const serverIP = data.ip;
+    console.log("Fetched IP:", serverIP);
+
+    var socket = io.connect(serverIP);
+
+    /* ===============================
+       SMOKE ALERT EVENT
+    =============================== */
+    socket.on("smoke_alert", function (data) {
+
+        const device = data.device;
+        const alert = data.alert_detected;
+
+        const card = document.querySelector(
+            "#device-container .device-card[data-device='" + device + "']"
+        );
+
+        if (!card) return;
+
+        if (alert === "active") {
+            card.classList.add("device-alert-blink");
+        } else {
+            card.classList.remove("device-alert-blink");
+        }
+
+    });
+
+    /* ===============================
+       STATUS UPDATE EVENT
+    =============================== */
+    socket.on('status_update', function (data) {
+
+        const deviceId = data.device_id;
+        const status = data.device_status;
+
+        const card = document.querySelector(
+            "#device-container .device-card[data-device='" + deviceId + "']"
+        );
+
+        if (!card) return;
+
+        const statusSpan = card.querySelector('.status');
+        const rippleCircles = card.querySelectorAll('svg circle');
+
+
+        if (status === 'online') {
+
+            statusSpan.textContent = 'Online';
+            statusSpan.classList.remove('offline');
+            statusSpan.classList.add('online');
+
+            rippleCircles.forEach(c => {
+                c.setAttribute('fill', '#10B981');
+            });
+
+        } else {
+
+            statusSpan.textContent = 'Offline';
+            statusSpan.classList.remove('online');
+            statusSpan.classList.add('offline');
+
+            rippleCircles.forEach(c => {
+                c.setAttribute('fill', '#EF4444');
+            });
+        }
+
+    });
+
+
+    /* ===============================
+       ON SOCKET CONNECT
+    =============================== */
+    socket.on("connect", () => {
+
+        console.log("Socket Connected");
+
+        // Make all online on first load
+        // makeAllDevicesOnline();
+
+    });
+
+})
+.catch(error => {
+    console.error('IP Fetch Error:', error);
+});
+
+
+/* ===============================
+   RESET DEVICE
+=============================== */
+function resetDevice(deviceId) {
+
+    fetch(`/reset-device/${deviceId}`, {
+        method: "POST"
+    })
+    .then(res => res.json())
+    .then(data => {
+
+        alert("Reset Done");
+
+        const card = document.querySelector(
+            "#device-container .device-card[data-device='" + deviceId + "']"
+        );
+
+        if (card) {
+            card.classList.remove("device-alert-blink");
+        }
+    });
+}
+
+</script>
+
+</body>
+
+</html>

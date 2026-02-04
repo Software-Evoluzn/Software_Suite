@@ -52,97 +52,106 @@
 
 
     /* Card specific styling for Professional Look */
-.light-card {
-    background-color: #fdfdfd !important; /* Specific Gray from your ref image */
-    border-radius: 22px !important;
-    border: 1px solid #3f3f3f !important;
-    padding: 22px !important;
-    color: #2942be !important;
-   
-}
+    .light-card {
+      background-color: #fdfdfd !important;
+      /* Specific Gray from your ref image */
+      border-radius: 22px !important;
+      border: 1px solid #3f3f3f !important;
+      padding: 22px !important;
+      color: #2942be !important;
 
-.card-head h3 { font-size: 18px; font-weight: 700; margin: 0; }
-.card-head span { font-size: 12px; color: #707EAE; }
+    }
 
-/* Control Row for Auto Motion & Brightness */
-.sensor-row {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 10px;
-    margin: 15px 0;
-}
+    .card-head h3 {
+      font-size: 18px;
+      font-weight: 700;
+      margin: 0;
+    }
 
-.sensor-box {
-    background: rgba(255, 255, 255, 0.3);
-    padding: 10px;
-    border-radius: 14px;
-    display: flex;
-    flex-direction: column;
-    gap: 5px;
-}
+    .card-head span {
+      font-size: 12px;
+      color: #707EAE;
+    }
 
-.sensor-box span {
-    font-size: 11px;
-    font-weight: 700;
-    display: flex;
-    align-items: center;
-    gap: 5px;
-}
+    /* Control Row for Auto Motion & Brightness */
+    .sensor-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      margin: 15px 0;
+    }
 
-/* Intensity and Lux Styling */
-.input-label {
-    display: flex;
-    justify-content: space-between;
-    font-size: 13px;
-    font-weight: 700;
-    margin-bottom: 5px;
-}
+    .sensor-box {
+      background: rgba(255, 255, 255, 0.3);
+      padding: 10px;
+      border-radius: 14px;
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+    }
 
-.intensity-container {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    margin-bottom: 15px;
-}
+    .sensor-box span {
+      font-size: 11px;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
 
-.v-indicator {
-    width: 45px;
-    height: 70px;
-    background: #BDC3C9;
-    border-radius: 10px;
-}
+    /* Intensity and Lux Styling */
+    .input-label {
+      display: flex;
+      justify-content: space-between;
+      font-size: 13px;
+      font-weight: 700;
+      margin-bottom: 5px;
+    }
 
-/* Lux Section - Highlighted Box */
-.lux-section {
-    background: rgba(255, 255, 255, 0.4);
-    padding: 12px;
-    border-radius: 16px;
-    margin-top: 10px;
-}
+    .intensity-container {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 15px;
+    }
 
-/* Professional Range Sliders */
-input[type=range] {
-    -webkit-appearance: none;
-    width: 100%;
-    background: transparent;
-}
+    .v-indicator {
+      width: 45px;
+      height: 70px;
+      background: #BDC3C9;
+      border-radius: 10px;
+    }
 
-input[type=range]::-webkit-slider-runnable-track {
-    width: 100%;
-    height: 6px;
-    background: #BDC3C9;
-    border-radius: 3px;
-}
+    /* Lux Section - Highlighted Box */
+    .lux-section {
+      background: rgba(255, 255, 255, 0.4);
+      padding: 12px;
+      border-radius: 16px;
+      margin-top: 10px;
+    }
 
-input[type=range]::-webkit-slider-thumb {
-    -webkit-appearance: none;
-    height: 16px;
-    width: 16px;
-    border-radius: 50%;
-    background: #FFFFFF;
-    border: 2px solid #1B2559;
-    margin-top: -5px;
-}
+    /* Professional Range Sliders */
+    input[type=range] {
+      -webkit-appearance: none;
+      width: 100%;
+      background: transparent;
+    }
+
+    input[type=range]::-webkit-slider-runnable-track {
+      width: 100%;
+      height: 6px;
+      background: #BDC3C9;
+      border-radius: 3px;
+    }
+
+    input[type=range]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      height: 16px;
+      width: 16px;
+      border-radius: 50%;
+      background: #FFFFFF;
+      border: 2px solid #1B2559;
+      margin-top: -5px;
+    }
 
     /* Mobile Responsive: Jab screen choti ho toh margin hat jaye */
     @media (max-width: 991px) {
@@ -391,12 +400,12 @@ input[type=range]::-webkit-slider-thumb {
 <body>
 
   <!-- MOBILE HAMBURGER -->
-    <button class="btn btn-primary d-lg-none m-2" onclick="toggleMobileSidebar()">
-        <i class="fa-solid fa-bars"></i>
-    </button>
+  <button class="btn btn-primary d-lg-none m-2" onclick="toggleMobileSidebar()">
+    <i class="fa-solid fa-bars"></i>
+  </button>
 
-    <!-- SIDEBAR -->
-    {% include 'navbar.html' %}
+  <!-- SIDEBAR -->
+  {% include 'navbar.html' %}
 
   <div class="dashboard-content">
     <div class="header-text">
@@ -427,27 +436,16 @@ input[type=range]::-webkit-slider-thumb {
     </div>
   </div>
 
-  <!-- <script>
-    // Professional Data Structure
+  <script>
     const dashboardData = [
       {
         floorName: "Building A - Floor 1",
         rtuId: "RTU-001",
         totalWh: "1024.90 Wh",
         lights: [
-          { id: 'tubeFOBF05', power: '48W', intensity: 57, wh: 364.15, status: true },
-          { id: 'tubeFOBF06', power: '48W', intensity: 85, wh: 312.50, status: true },
-          { id: 'tubeFOBF07', power: '48W', intensity: 100, wh: 348.25, status: true },
-          { id: 'tubeFOBF08', power: '48W', intensity: 20, wh: 10.25, status: false }
-        ]
-      },
-      {
-        floorName: "Building A - Floor 2",
-        rtuId: "RTU-002",
-        totalWh: "792.45 Wh",
-        lights: [
-          { id: 'tubeFOBF21', power: '48W', intensity: 70, wh: 200.15, status: true },
-          { id: 'tubeFOBF22', power: '48W', intensity: 40, wh: 150.50, status: true }
+          { id: 'HB-Light-05', power: '150W', intensity: 57, lux: 700, status: true, motion: true, brightness: false },
+          { id: 'HB-Light-06', power: '150W', intensity: 85, lux: 500, status: true, motion: true, brightness: true },
+          { id: 'HB-Light-07', power: '150W', intensity: 30, lux: 300, status: false, motion: false, brightness: false }
         ]
       }
     ];
@@ -456,90 +454,6 @@ input[type=range]::-webkit-slider-thumb {
       const container = document.getElementById('rtu-list-container');
 
       container.innerHTML = dashboardData.map((floor, index) => `
-                <div class="rtu-section">
-                    <div class="rtu-header" onclick="toggleFloor('floor-${index}', this)">
-                        <div class="rtu-info">
-                            <div class="rtu-icon-box"><i class="fa-solid fa-building"></i></div>
-                            <div>
-                                <div style="font-weight: 700; color: var(--primary-blue);">${floor.floorName}</div>
-                                <div style="font-size: 12px; color: var(--secondary-blue);">RTU ID: ${floor.rtuId}</div>
-                            </div>
-                        </div>
-                        <div class="rtu-stats-summary">
-                            <div class="lights-count">${floor.lights.filter(l => l.status).length}/${floor.lights.length} lights</div>
-                            <div style="font-size: 12px; color: var(--secondary-blue);">${floor.totalWh}</div>
-                        </div>
-                    </div>
-                    
-                    <div id="floor-${index}" class="lights-grid">
-                        ${floor.lights.map(light => `
-                            <div class="light-card">
-                                <div class="card-head">
-                                    <div class="light-title">
-                                        <i class="fa-regular fa-lightbulb" style="color: ${light.status ? '#FFB547' : '#A3AED0'}"></i>
-                                        ${light.id} <span style="font-weight: 400; font-size: 12px; color: var(--secondary-blue);">(${light.power})</span>
-                                    </div>
-                                    <label class="switch">
-                                        <input type="checkbox" ${light.status ? 'checked' : ''}>
-                                        <span class="slider"></span>
-                                    </label>
-                                </div>
-                                
-                                <div class="intensity-control">
-                                    <div class="range-label">
-                                        <span>Light Intensity</span>
-                                        <span style="color: var(--primary-blue); font-weight: 700;">${light.intensity}%</span>
-                                    </div>
-                                    <input type="range" min="0" max="100" value="${light.intensity}">
-                                </div>
-
-                                <div class="power-info">
-                                    <span style="color: var(--secondary-blue);">Power Usage</span>
-                                    <span style="color: var(--primary-blue); font-weight: 600;">${light.wh} Wh</span>
-                                </div>
-                            </div>
-                        `).join('')}
-                    </div>
-                </div>
-            `).join('');
-    }
-
-    function toggleFloor(id, header) {
-      const grid = document.getElementById(id);
-      const allGrids = document.querySelectorAll('.lights-grid');
-
-      // Toggle Logic
-      if (grid.style.display === "grid") {
-        grid.style.display = "none";
-        header.classList.remove('active');
-      } else {
-        grid.style.display = "grid";
-        header.classList.add('active');
-      }
-    }
-
-    // Run on load
-    window.onload = renderDashboard;
-  </script> -->
-
-  <script>
-    const dashboardData = [
-        {
-            floorName: "Building A - Floor 1",
-            rtuId: "RTU-001",
-            totalWh: "1024.90 Wh",
-            lights: [
-                { id: 'HB-Light-05', power: '150W', intensity: 57, lux: 700, status: true, motion: true, brightness: false },
-                { id: 'HB-Light-06', power: '150W', intensity: 85, lux: 500, status: true, motion: true, brightness: true },
-                { id: 'HB-Light-07', power: '150W', intensity: 30, lux: 300, status: false, motion: false, brightness: false }
-            ]
-        }
-    ];
-
-    function renderDashboard() {
-        const container = document.getElementById('rtu-list-container');
-
-        container.innerHTML = dashboardData.map((floor, index) => `
             <div class="rtu-section">
                 <div class="rtu-header" onclick="toggleFloor('floor-${index}', this)">
                     <div class="rtu-info">
@@ -552,7 +466,12 @@ input[type=range]::-webkit-slider-thumb {
                     <div class="rtu-stats-summary">
                         <div class="lights-count">${floor.lights.filter(l => l.status).length}/${floor.lights.length} lights</div>
                         <div style="font-size: 12px; color: var(--secondary-blue);">${floor.totalWh}</div>
-                    </div>
+                        
+                        <button>
+                          <i class="fa fa-angle-down" aria-hidden="true"></i>
+                        </button>
+                      </div>
+
                 </div>
                 
                 <div id="floor-${index}" class="lights-grid">
@@ -617,19 +536,19 @@ input[type=range]::-webkit-slider-thumb {
     }
 
     function toggleFloor(id, header) {
-        const grid = document.getElementById(id);
-        if (grid.style.display === "grid") {
-            grid.style.display = "none";
-            header.classList.remove('active');
-        } else {
-            grid.style.display = "grid";
-            header.classList.add('active');
-        }
+      const grid = document.getElementById(id);
+      if (grid.style.display === "grid") {
+        grid.style.display = "none";
+        header.classList.remove('active');
+      } else {
+        grid.style.display = "grid";
+        header.classList.add('active');
+      }
     }
 
     window.onload = renderDashboard;
-</script>
-  
+  </script>
+
 </body>
 
 </html>

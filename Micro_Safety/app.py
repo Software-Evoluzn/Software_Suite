@@ -42,12 +42,21 @@ def debug_session():
 ALARM_TRIGGERED = False 
 
 
-SMTP_SERVER = "smtp.gmail.com"
-SMTP_PORT = 587  # TLS port  
-SENDER_EMAIL = "shilpaevoluzn@gmail.com"
-SENDER_NAME = "Shilpa"
-SENDER_PASSWORD = "ucma aapb quiv mnos"
-EMAIL_RECEIVER = ["dhoteshilpa9@gmail.com","shilpa.snable@gmail.com"]
+# SMTP_SERVER = "smtp.gmail.com"
+# SMTP_PORT = 587  # TLS port  
+# SENDER_EMAIL = "shilpaevoluzn@gmail.com"
+# SENDER_NAME = "Shilpa"
+# SENDER_PASSWORD = "ucma aapb quiv mnos"
+# EMAIL_RECEIVER = ["dhoteshilpa9@gmail.com","shilpa.snable@gmail.com"]
+
+# Email server setup
+SMTP_SERVER = 'smtp.gmail.com'
+SMTP_PORT = 587
+SENDER_EMAIL = "evoluzn999@gmail.com"
+SENDER_NAME = "Evoluzn Team"
+SENDER_PASSWORD = "cjbw fabr owpf plyz"  # Use App Password
+EMAIL_RECEIVER = []
+# EMAIL_RECEIVER = ["anjali@evoluzn.in", "software@evoluzn.in"]
 
 # # MySQL Database connection details
 db_config = {
@@ -73,7 +82,9 @@ def create_tables():
 			message TEXT NOT NULL,
 			timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
 			mail_sent_flag TINYINT(1) DEFAULT 0,
-            exceeded_phases varchar(255)
+            exceeded_phases varchar(255),
+            action_taken TEXT,
+            action_timestamp DATETIME           
         )
     """)
     # ALTER TABLE alert_temp ADD UNIQUE unique_index (serial_number, timestamp)
@@ -215,7 +226,7 @@ def on_message(client, userdata, msg):
             SELECT product_type 
             FROM product_details 
             WHERE serial_number = %s
-            AND product_type IN ('BTB4Channel', 'Single_Phase')
+            AND product_type IN ('BTB4Channel', 'Single_Phase', 'smokeDetector')
         """, (device_id,))
         
         product = cursor.fetchone()
@@ -266,6 +277,66 @@ def on_message(client, userdata, msg):
                 relay3 = int(parts[10])
                 relay4 = int(parts[11])
 
+        elif device_type == "smokeDetector":
+            print("\n🔥🔥 SMOKE DETECTED MESSAGE 🔥🔥")
+            print("Raw Payload:", raw_payload)
+            print("stuff-->",raw_payload)
+            parts = raw_payload.split(":")
+
+            if len(parts) != 3:
+                print("❌ Invalid payload format")
+                return
+
+            device_name = parts[1].strip()
+            print("Device:", device_name)
+
+            # 🔹 Check current smoke status
+            cursor.execute("""
+                SELECT smoke_detected_at
+                FROM smoke_device
+                WHERE device_name = %s
+                ORDER BY smoke_detected_at DESC
+                LIMIT 1
+            """, (device_name,))
+
+            last_row = cursor.fetchone()
+
+            insert_new = False
+            if not last_row:
+                insert_new = True
+            else:
+                last_time = last_row[0]  # datetime object
+                now = datetime.datetime.now()
+                diff = (now - last_time).total_seconds() / 60  # in minutes
+                if diff >= 2:
+                    insert_new = True
+
+            if insert_new:
+                cursor.execute("""
+                    INSERT INTO smoke_device
+                    (device_name, device_type, online_status, smoke_active, smoke_detected_at)
+                    VALUES (%s, 'smoke', 'online', 1, NOW())
+                """, (device_name,))
+                conn.commit()
+                print(f"💾 DB INSERTED (smoke_active=1) for {device_name}")
+               
+                current_time = datetime.datetime.now()
+
+                send_smoke_email(device_name, current_time)
+
+                 # 🔹 Emit socket event
+           
+            else:
+                print(f"⏸ Duplicate ignored (less than 2 minutes) for {device_name}")
+
+            socketio.emit("micro_smoke_alert", {
+                    "device": device_name,
+                    "alert_detected": "active"
+            })
+
+            print("📡 SOCKET EMIT → micro_smoke_alert : SMOKE_DETECTED")
+            return
+
         # ----------------------------------------------------------------------
         # 4. SAVE INTO phase_data TABLE
         # ----------------------------------------------------------------------
@@ -305,6 +376,38 @@ def on_message(client, userdata, msg):
         except:
             pass
 
+def send_smoke_email(device_name, current_time):
+
+    print("here --> (sending email)")
+
+    # Create Flask app context manually
+    with app.app_context():
+
+        html_body = render_template(
+            "alert_email.html",
+            serial_number=device_name,
+            timestamp=current_time.strftime("%d %b %Y, %I:%M %p")
+        )
+
+    print(f"📤 Sending email to: {EMAIL_RECEIVER}")
+
+    msg = MIMEMultipart("alternative")
+    msg['From'] = f"{SENDER_NAME} <{SENDER_EMAIL}>"
+    msg['To'] = ", ".join(EMAIL_RECEIVER)
+    msg['Subject'] = f"⚠️ Smoke Alert for {device_name}"
+
+    msg.attach(MIMEText(html_body, 'html'))
+
+    server = smtplib.SMTP(SMTP_SERVER, SMTP_PORT)
+    server.set_debuglevel(1)
+    server.starttls()
+    server.login(SENDER_EMAIL, SENDER_PASSWORD)
+    server.sendmail(SENDER_EMAIL, EMAIL_RECEIVER, msg.as_string())
+    server.quit()
+
+    print("📧 Alert email sent.")
+
+
 def insert_alert(serial_number, message):
     print("Inserting or updating alert...", serial_number, message)
     conn = connect_db()
@@ -316,8 +419,8 @@ def insert_alert(serial_number, message):
             WHERE serial_number = %s AND message = %s
         """
         cursor.execute(check_query, (serial_number, message))
-        existing = cursor.fetchone()
-        print('dsdsdsdsdsdsds',existing)
+        rows = cursor.fetchall()
+        existing = rows[0] if rows else None
 
         current_time = datetime.datetime.now()
 
@@ -483,43 +586,22 @@ def alert_show(user_email):
         conn = connect_db()
         cursor = conn.cursor(dictionary=True)
 
-       
-
-        # Match serial_number logic using RIGHT() and string functions
-        # cursor.execute("""
-        #     SELECT 
-        #         at.serial_number, 
-        #         at.message, 
-        #         at.exceeded_phases, 
-        #         MAX(at.timestamp) AS timestamp
-        #         FROM alert_temp at
-        #         JOIN product_details dt 
-        #         ON RIGHT(at.serial_number, LENGTH(dt.serial_number) - 3) = RIGHT(dt.serial_number, LENGTH(dt.serial_number) - 3)
-        #         WHERE dt.company_name = (
-        #         SELECT company_name 
-        #         FROM user_table 
-        #         WHERE email = %s
-        #     )
-        #     GROUP BY at.serial_number, at.message, at.exceeded_phases
-        # """, (user_email,))
-
-
         cursor.execute("""
-                        SELECT  
+                    SELECT  
                         at.serial_number,  
                         at.message,  
                         at.exceeded_phases,  
                         MAX(at.timestamp) AS timestamp  
                     FROM alert_temp at  
                     JOIN product_details dt  
-                        ON RIGHT(at.serial_number, LENGTH(dt.serial_number) - 3) = RIGHT(dt.serial_number, LENGTH(dt.serial_number) - 3)  
+                        ON REPLACE(at.serial_number, 'Alert', '') = dt.serial_number  
                     JOIN user_table ut  
-                        ON dt.user_access = ut.email  
-                    WHERE ut.email = %s 
+                        ON FIND_IN_SET(ut.name, dt.user_access) > 0
+                        AND ut.company_name = dt.company_name
+                    WHERE ut.email = %s  
+                       AND DATE(at.timestamp) = CURDATE()
                     GROUP BY at.serial_number, at.message, at.exceeded_phases;
                 """, (user_email,))
-
-
 
         alerts = cursor.fetchall()
         print("Filtered alerts:", alerts)
@@ -560,18 +642,7 @@ def get_latest_device_data(user_email):
             WHERE LOWER(user_access) LIKE %s 
             AND product_type = 'Wiretempsync'
         """, (f"%{username.lower()}%",))
-
         devices = cursor.fetchall()
-
-
-        # cursor.execute("""
-        #     SELECT id AS device_id, serial_number, graph_duration
-        #     FROM product_details
-        #     WHERE LOWER(user_access) LIKE %s AND product_type = 'Wiretempsync'
-        # """, (f"%{username.lower()}%",))  # Tuple with single string
-
-        # devices = cursor.fetchall()
-
 
         print("the devices data is -->", devices)
 
@@ -636,8 +707,6 @@ def get_latest_device_data(user_email):
                         "MIN": min_value,
                         "MAX": max_value
                     }
-
-            # print("sensor-0->",result)
             
         for serial_number, panels in panel_structure.items():
 
@@ -790,51 +859,96 @@ def dashboard():
         devices=devices
     )
 
-@app.route('/wts_home', methods=['POST', 'GET'])
+@app.route('/wts_home', methods=['GET'])
 def home():
 
     user_email = request.args.get('email')
-    print("Userr Name ",user_email)
-    
+    if not user_email:
+        return jsonify({'status': 'error', 'message': 'Email required'}), 400
+
     conn = connect_db()
     cursor = conn.cursor(dictionary=True)
 
     try:
-        
-        filtered_devices = []
         received_data = get_latest_device_data(user_email)
-
-        print("recived data",received_data)
-
-    
         alerts = alert_show(user_email)
 
-        print("Received data for home page:", type(alerts)) 
+        # Defensive check
+        if not received_data or not received_data[0]:
+            return jsonify({
+                'status': 'success',
+                'device_data': {},
+                'result': {},
+                'alerts': alerts
+            })
 
-        # ❗ FIX: Remove None keys before jsonify
-        device_data = {k: v for k, v in received_data[0].items() if k is not None}
-        result_data = {k: v for k, v in received_data[1].items() if k is not None}
+        # Clean None keys
+        device_data = {k: v for k, v in received_data[0].items() if k}
+        result_data = {k: v for k, v in received_data[1].items() if k}
 
-        print("recived data2",received_data[1])
+        device_names = list(device_data.keys())
+        if not device_names:
+            return jsonify({
+                'status': 'success',
+                'device_data': device_data,
+                'result': result_data,
+                'alerts': alerts
+            })
 
-        print("Alert-->, success", received_data[0])
+        placeholders = ','.join(['%s'] * len(device_names))
+
+        cursor.execute(f"""
+            SELECT 
+                ds.device_id,
+                ds.device_status,
+                dt.device_location
+            FROM device_status ds
+            LEFT JOIN product_details dt 
+                ON ds.device_id = dt.serial_number
+            WHERE ds.device_id IN ({placeholders})
+        """, device_names)
+
+        status_rows = cursor.fetchall()
+
+        # Build lookup once
+        status_lookup = {
+            row['device_id']: row
+            for row in status_rows
+        }
+
+        # Merge status + location into device_data
+        for device_id, panels in device_data.items():
+            info = status_lookup.get(device_id, {})
+            panels['status'] = info.get('device_status', 'offline')
+            panels['device_location'] = info.get('device_location', 'Unknown')
+
+        # Clean alert names (fast + safe)
+        for alert in alerts:
+            name = alert.get('serial_number', '')
+            if name:
+                alert['device_clean'] = name.replace('Alert', '').strip()
+
+        print("Final device_data:<--", alerts)
 
         return jsonify({
             'status': 'success',
-            'devices': filtered_devices,
             'device_data': device_data,
             'result': result_data,
             'alerts': alerts
         })
 
     except mysql.connector.Error as err:
-        print(f"Error fetching data: {err}")
-        return "Error fetching data", 500  # ? Add this line
+        print("DB Error:", err)
+        return jsonify({'status': 'error', 'message': 'Database error'}), 500
+
+    except Exception as e:
+        print("Error:", e)
+        return jsonify({'status': 'error', 'message': 'Internal server error'}), 500
 
     finally:
         cursor.close()
         conn.close()
-    
+
 @app.route('/update_panel', methods=['POST'])
 def update_panel():
     
@@ -952,7 +1066,7 @@ def graph_page():
         """, (alert_device_id,))
         alertsindivisual = cursor.fetchall()
 
-        print("device_data for device:", device_data)
+        print("device_data for device:", device_data, alertsindivisual)
 
         return jsonify({
             'status': 'success',
@@ -973,10 +1087,8 @@ def graph_page():
 @app.route('/micro_publish', methods=['POST', 'GET'])
 def publish_threshold():
     """Publish threshold value to MQTT and update database."""
-
     conn = None
     cursor = None
-
     try:
         data = request.get_json()
         print("Received data for threshold:", data)
@@ -1151,13 +1263,65 @@ def get_temperature_graph_data(data):
             formatted_data.append(row_data)
 
         print("Sending data bro:")
-        socketio.emit('micro_graph_data', {'data': formatted_data, 'phase_values': filtered_device_id, 'threshold': threshold, 'graph_duration': graph_duration, 'room': sid})
+        socketio.emit('micro_graph_data', {'data': formatted_data, 'phase_values': filtered_device_id, 'threshold': threshold, 'result': received_data[1], 'graph_duration': graph_duration, 'room': sid})
 
 
     except Exception as e:
         print("Database query failed:", e)
         socketio.emit('micro_graph_data', {'data': [], 'room': sid})
 
+@app.route('/save_alert_action', methods=['POST'])
+def save_alert_action():
+    data = request.get_json()
+
+    device_name = data.get('device_name')
+    message = data.get('message')
+    action_taken = data.get('action_taken')
+    device_id = data.get('deviceId')
+    action_time = datetime.datetime.now()
+
+    print("Saving action for device:", device_name, "message:", message, device_id, action_taken)
+    
+    if not all([device_name, message, action_taken, device_id]):
+        return jsonify({
+            "status": "error",
+            "message": "Missing required fields"
+        }), 400
+
+    conn = connect_db()
+    cursor = conn.cursor()
+
+
+    try:
+        query = """
+            UPDATE alert_temp
+            SET action_taken = %s,
+                action_timestamp = %s
+            WHERE serial_number = %s
+              AND message = %s
+              AND id = %s
+        """
+
+        cursor.execute(query, (
+            action_taken,
+            action_time,
+            device_name,
+            message,
+            device_id
+        ))
+
+        conn.commit()
+
+        return jsonify({"status": "success"}), 200
+
+    except Exception as e:
+        print("Error saving action:", e)
+        conn.rollback()
+        return jsonify({"status": "error"}), 500
+
+    finally:
+        cursor.close()
+        conn.close()
 
 # ================================================ BTB4 Channel & Single Phase ================================================
 
@@ -1706,6 +1870,158 @@ def singlephase_graph():
         }), 500
 
 # ==============================================================================================================================
+
+# ======================================================= Smoke Detector =======================================================
+# @app.route('/smokeDetector', methods=['GET'])
+# def smoke_detector():
+#     user_name = request.args.get('user_name')
+#     company_name = request.args.get('company_name')
+
+#     conn = connect_db()
+#     cursor = conn.cursor(dictionary=True)
+
+#     # 1️⃣ Fetch devices
+#     cursor.execute("""
+#         SELECT serial_number
+#         FROM product_details
+#         WHERE product_type = 'smokeDetector'
+#           AND company_name = %s
+#           AND LOWER(user_access) LIKE %s
+#     """, (company_name, f"%{user_name.lower()}%"))
+
+#     devices = cursor.fetchall()
+#     serial_numbers = [d['serial_number'] for d in devices]
+
+#     if not serial_numbers:
+#         return jsonify({})
+
+#     # 2️⃣ Fetch statuses
+#     format_strings = ','.join(['%s'] * len(serial_numbers))
+
+#     cursor.execute(f"""
+#         SELECT device_id, device_status
+#         FROM device_status
+#         WHERE device_id IN ({format_strings})
+#     """, tuple(serial_numbers))
+
+#     status_rows = cursor.fetchall()
+#     device_status = {r['device_id']: r['device_status'] for r in status_rows}
+
+#     # 3️⃣ Final response
+#     device_data = {}
+#     for sn in serial_numbers:
+#         device_data[sn] = {
+#             "status": device_status.get(sn, "offline")
+#         }
+
+#     cursor.close()
+#     conn.close()
+
+#     return jsonify(device_data)
+
+@app.route('/smokeDetector', methods=['GET'])
+def smoke_detector():
+    user_name = request.args.get('user_name')
+    company_name = request.args.get('company_name')
+
+    conn = connect_db()
+    cursor = conn.cursor(dictionary=True)
+
+    # 1️⃣ Fetch all smokeDetector serial numbers for this user
+    cursor.execute("""
+        SELECT serial_number
+        FROM product_details
+        WHERE product_type = 'smokeDetector'
+          AND company_name = %s
+          AND LOWER(user_access) LIKE %s
+    """, (company_name, f"%{user_name.lower()}%"))
+
+    devices = cursor.fetchall()
+    serial_numbers = [d['serial_number'] for d in devices]
+
+    if not serial_numbers:
+        cursor.close()
+        conn.close()
+        return jsonify([])  # empty list if no devices
+
+    # 2️⃣ Fetch device info from smoke_device table
+    format_strings = ','.join(['%s'] * len(serial_numbers))
+    cursor.execute(f"""
+        SELECT device_name, smoke_active, reset_at, online_status
+        FROM smoke_device
+        WHERE device_name IN ({format_strings})
+    """, tuple(serial_numbers))
+
+    smoke_rows = cursor.fetchall()
+    smoke_dict = {r['device_name']: r for r in smoke_rows}
+
+    # 3️⃣ Build response with device, status, alert_detected
+    device_data = []
+    for sn in serial_numbers:
+        entry = smoke_dict.get(sn)
+        if entry:
+            # Determine alert
+            alert = "active" if entry['smoke_active'] == 1 and entry['reset_at'] is None else "inactive"
+
+            # Determine status
+            status = entry['online_status'] if entry['online_status'] else "offline"
+
+        else:
+            alert = "inactive"
+            status = "offline"
+
+        device_data.append({
+            "device": sn,
+            "status": status,
+            "alert_detected": alert
+        })
+
+    cursor.close()
+    conn.close()
+
+    return jsonify(device_data)
+
+
+@app.route('/reset-device/<device_id>', methods=['POST'])
+def reset_device(device_id):
+    print("🔁 Reset called for:", device_id)
+
+    if not device_id:
+        return jsonify({"error": "Device name missing"}), 400
+
+    topic = f"{device_id}/control"
+    payload = "RESET"
+
+    try:
+        # 🔹 MQTT
+        mqtt_client.publish(topic, payload, qos=1)
+
+        # 🔹 DB update
+        conn = connect_db()
+        cursor = conn.cursor()
+
+        cursor.execute("""
+            UPDATE smoke_device
+            SET smoke_active = 0,
+                reset_at = NOW()
+            WHERE device_name = %s
+        """, (device_id,))
+
+        conn.commit()
+        cursor.close()
+        conn.close()
+
+        return jsonify({
+            "device": device_id,
+            "status": "RESET"
+        }), 200
+
+    except Exception as e:
+        return jsonify({
+            "status": "error",
+            "message": str(e)
+        }), 500
+
 
 connect_mqtt()
 
